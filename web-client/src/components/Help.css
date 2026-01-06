@@ -1,0 +1,26 @@
+.help-container {
+  padding: 1rem;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  max-width: 800px;
+ margin: 0 auto;
+}
+
+.help-container h2 {
+  color: #2c3e50;
+  margin-top: 0;
+}
+
+.help-content h3,
+.help-content h4 {
+  color: #34495e;
+}
+
+.help-content ul {
+  padding-left: 1.5rem;
+}
+
+.help-content li {
+  margin-bottom: 0.5rem;
+}

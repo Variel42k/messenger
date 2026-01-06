@@ -1,0 +1,104 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "messenger.fullname" . }}
+  labels:
+    {{- include "messenger.labels" . | nindent 4 }}
+spec:
+  {{- if not .Values.autoscaling.enabled }}
+  replicas: {{ .Values.replicaCount }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "messenger.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "messenger.selectorLabels" . | nindent 8 }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "messenger.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: {{ .Chart.Name }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+          livenessProbe:
+            httpGet:
+              path: /actuator/health
+              port: http
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /actuator/health
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 5
+          env:
+            - name: DB_HOST
+              value: {{ .Values.env.DB_HOST }}
+            - name: DB_PORT
+              value: {{ .Values.env.DB_PORT | quote }}
+            - name: DB_NAME
+              value: {{ .Values.env.DB_NAME }}
+            - name: DB_USERNAME
+              value: {{ .Values.env.DB_USERNAME }}
+            - name: DB_PASSWORD
+              value: {{ .Values.env.DB_PASSWORD }}
+            - name: REDIS_HOST
+              value: {{ .Values.env.REDIS_HOST }}
+            - name: REDIS_PORT
+              value: {{ .Values.env.REDIS_PORT | quote }}
+            - name: RUSTFS_ENDPOINT
+              value: {{ .Values.env.RUSTFS_ENDPOINT }}
+            - name: S3_ACCESS_KEY
+              value: {{ .Values.env.S3_ACCESS_KEY }}
+            - name: S3_SECRET_KEY
+              value: {{ .Values.env.S3_SECRET_KEY }}
+            - name: S3_BUCKET_NAME
+              value: {{ .Values.env.S3_BUCKET_NAME }}
+            - name: JWT_SECRET
+              value: {{ .Values.env.JWT_SECRET }}
+            - name: JWT_ACCESS_TOKEN_EXPIRATION
+              value: {{ .Values.env.JWT_ACCESS_TOKEN_EXPIRATION | quote }}
+            - name: JWT_REFRESH_TOKEN_EXPIRATION
+              value: {{ .Values.env.JWT_REFRESH_TOKEN_EXPIRATION | quote }}
+            - name: WS_ALLOWED_ORIGINS
+              value: {{ .Values.env.WS_ALLOWED_ORIGINS }}
+            - name: CORS_ALLOWED_ORIGINS
+              value: {{ .Values.env.CORS_ALLOWED_ORIGINS }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          volumeMounts:
+            - name: logs
+              mountPath: /app/logs
+      volumes:
+        - name: logs
+          emptyDir: {}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

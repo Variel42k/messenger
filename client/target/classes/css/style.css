@@ -1,0 +1,85 @@
+.root {
+    -fx-background-color: #f0f0f0;
+}
+
+.list-view {
+    -fx-background-color: white;
+    -fx-border-color: #cccccc;
+    -fx-border-width: 1px;
+}
+
+.list-cell {
+    -fx-padding: 5px;
+    -fx-border-color: transparent transparent #eeeeee transparent;
+    -fx-border-width: 0 0 1 0;
+}
+
+.list-cell:selected {
+    -fx-background-color: #0078d4;
+    -fx-text-fill: white;
+}
+
+.text-field {
+    -fx-background-color: white;
+    -fx-border-color: #cccccc;
+    -fx-border-width: 1px;
+    -fx-border-radius: 4px;
+    -fx-background-radius: 4px;
+}
+
+.button {
+    -fx-background-color: #0078d4;
+    -fx-text-fill: white;
+    -fx-border-radius: 4px;
+    -fx-background-radius: 4px;
+    -fx-padding: 5px 10px;
+}
+
+.button:hover {
+    -fx-background-color: #106ebe;
+}
+
+.message-bubble {
+    -fx-background-color: #e5e5ea;
+    -fx-background-radius: 15px;
+    -fx-padding: 10px;
+    -fx-wrap-text: true;
+    -fx-max-width: 80%;
+}
+
+.my-message {
+    -fx-background-color: #0078d4;
+    -fx-text-fill: white;
+    -fx-alignment: top-right;
+}
+
+.other-message {
+    -fx-alignment: top-left;
+}
+
+.chat-header {
+    -fx-font-size: 16px;
+    -fx-font-weight: bold;
+    -fx-padding: 10px;
+}
+
+.status-online {
+    -fx-text-fill: #4caf50;
+}
+
+.status-offline {
+    -fx-text-fill: #9e9e9e;
+}
+
+.menu-bar {
+    -fx-background-color: #ffffff;
+}
+
+.menu-button {
+    -fx-background-color: transparent;
+}
+
+.scroll-pane {
+    -fx-background: transparent;
+    -fx-border-color: transparent;
+}
