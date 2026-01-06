@@ -1,0 +1,139 @@
+# Default values for messenger
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+# Образы Docker
+image:
+  repository: messenger-server
+  pullPolicy: IfNotPresent
+  # Overrides the image tag whose default is the chart appVersion.
+  tag: ""
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+# Управление ресурсами
+resources:
+  # We usually recommend not to specify default resources and to leave this as a conscious
+  # choice for the user. This also increases chances charts run on environments with little
+  # resources, such as Minikube. If you do want to specify resources, uncomment the following
+  # lines, adjust them as necessary, and remove the curly braces after 'resources:'.
+  limits:
+    cpu: 500m
+    memory: 1Gi
+  requests:
+    cpu: 250m
+    memory: 512Mi
+
+# Управление автомасштабированием
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 100
+  targetCPUUtilizationPercentage: 80
+  # targetMemoryUtilizationPercentage: 80
+
+# Управление сервисами
+serviceAccount:
+  # Specifies whether a service account should be created
+  create: true
+  # Annotations to add to the service account
+  annotations: {}
+  # The name of the service account to use.
+  # If not set and create is true, a name is generated using the fullname template
+  name: ""
+
+podAnnotations: {}
+
+podSecurityContext: {}
+  # fsGroup: 2000
+
+securityContext: {}
+  # capabilities:
+  #   drop:
+  #   - ALL
+  # readOnlyRootFilesystem: true
+  # runAsNonRoot: true
+  # runAsUser: 1000
+
+# Конфигурация сервиса
+service:
+  type: ClusterIP
+  port: 8080
+
+# Конфигурация ingress
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+    # kubernetes.io/ingress.class: nginx
+    # kubernetes.io/tls-acme: "true"
+  hosts:
+    - host: chart-example.local
+      paths:
+        - path: /
+          pathType: ImplementationSpecific
+  tls: []
+  # - secretName: chart-example-tls
+  #    hosts:
+  #      - chart-example.local
+
+# Количество реплик
+replicaCount: 1
+
+# Конфигурация PostgreSQL
+postgresql:
+  enabled: true
+  auth:
+    postgresPassword: "password"
+    database: "messenger"
+  primary:
+    persistence:
+      enabled: true
+      size: 8Gi
+
+# Конфигурация Redis
+redis:
+  enabled: true
+  auth:
+    enabled: false
+  master:
+    persistence:
+      enabled: true
+      size: 8Gi
+
+# Конфигурация MinIO
+minio:
+  enabled: true
+  auth:
+    rootUser: "minioadmin"
+    rootPassword: "minioadmin"
+  persistence:
+    enabled: true
+    size: 10Gi
+
+# Переменные окружения для сервера
+env:
+  DB_HOST: "messenger-postgresql"
+  DB_PORT: "5432"
+  DB_NAME: "messenger"
+  DB_USERNAME: "postgres"
+  DB_PASSWORD: "password"
+  REDIS_HOST: "messenger-redis-master"
+  REDIS_PORT: "6379"
+  RUSTFS_ENDPOINT: "http://messenger-minio:9000"
+  S3_ACCESS_KEY: "minioadmin"
+  S3_SECRET_KEY: "minioadmin"
+  S3_BUCKET_NAME: "messenger-files"
+  JWT_SECRET: "mySecretKeyForDevelopmentOnly"
+  JWT_ACCESS_TOKEN_EXPIRATION: "900000"
+  JWT_REFRESH_TOKEN_EXPIRATION: "604800000"
+  WS_ALLOWED_ORIGINS: "http://localhost:3000,http://localhost:8080"
+  CORS_ALLOWED_ORIGINS: "http://localhost:3000,http://localhost:8080,http://localhost:4200"
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}

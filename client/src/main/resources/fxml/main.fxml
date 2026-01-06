@@ -1,0 +1,120 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<VBox xmlns="http://javafx.com/javafx/11.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.messenger.client.controller.MainController">
+   <children>
+      <BorderPane>
+         <top>
+            <MenuBar BorderPane.alignment="CENTER">
+              <menus>
+                <Menu mnemonicParsing="false" text="File">
+                  <items>
+                    <MenuItem mnemonicParsing="false" text="Close" />
+                  </items>
+                </Menu>
+                <Menu mnemonicParsing="false" text="Edit">
+                  <items>
+                    <MenuItem mnemonicParsing="false" text="Delete" />
+                  </items>
+                </Menu>
+                <Menu mnemonicParsing="false" text="Language">
+                  <items>
+                    <MenuItem fx:id="englishMenuItem" mnemonicParsing="false" text="English" />
+                    <MenuItem fx:id="russianMenuItem" mnemonicParsing="false" text="Русский" />
+                    <MenuItem fx:id="spanishMenuItem" mnemonicParsing="false" text="Español" />
+                  </items>
+                </Menu>
+                <Menu mnemonicParsing="false" text="Help">
+                  <items>
+                    <MenuItem fx:id="helpMenuItem" mnemonicParsing="false" text="Help" onAction="#showHelp" />
+                    <MenuItem mnemonicParsing="false" text="About" />
+                  </items>
+                </Menu>
+              </menus>
+            </MenuBar>
+         </top>
+         <left>
+            <VBox prefWidth="250.0" BorderPane.alignment="CENTER">
+               <children>
+                  <Label text="Chats" />
+                  <ListView fx:id="chatListView" VBox.vgrow="ALWAYS" />
+                  <HBox alignment="CENTER_LEFT" spacing="5.0">
+                     <children>
+                        <TextField fx:id="newChatNameField" prefHeight="25.0" prefWidth="150.0" promptText="Chat name" />
+                        <Button fx:id="createChatButton" mnemonicParsing="false" text="Create" />
+                     </children>
+                     <padding>
+                        <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
+                     </padding>
+                  </HBox>
+               </children>
+               <padding>
+                  <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
+               </padding>
+            </VBox>
+         </left>
+         <center>
+            <VBox BorderPane.alignment="CENTER">
+               <children>
+                  <HBox alignment="CENTER_LEFT" spacing="5.0">
+                     <children>
+                        <Label fx:id="chatNameLabel" text="Select a chat" />
+                        <Pane HBox.hgrow="ALWAYS" />
+                        <Label fx:id="onlineStatusLabel" text="Online" />
+                     </children>
+                     <padding>
+                        <Insets bottom="10.0" left="10.0" right="10.0" top="10.0" />
+                     </padding>
+                  </HBox>
+                  <ListView fx:id="messageListView" prefHeight="400.0" prefWidth="600.0" VBox.vgrow="ALWAYS" />
+                  <HBox alignment="CENTER_LEFT" spacing="5.0">
+                     <children>
+                        <TextField fx:id="messageTextField" onAction="#sendMessage" prefHeight="25.0" prefWidth="500.0" promptText="Type a message..." />
+                        <Button fx:id="sendButton" mnemonicParsing="false" onAction="#sendMessage" text="Send" />
+                        <Button fx:id="fileButton" mnemonicParsing="false" onAction="#selectFile" text="File" />
+                     </children>
+                     <padding>
+                        <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
+                     </padding>
+                  </HBox>
+               </children>
+            </VBox>
+         </center>
+         <right>
+            <VBox prefWidth="200.0" BorderPane.alignment="CENTER">
+               <children>
+                  <Label text="Members" />
+                  <ListView fx:id="memberListView" VBox.vgrow="ALWAYS" />
+                  <HBox alignment="CENTER_LEFT" spacing="5.0">
+                     <children>
+                        <TextField fx:id="addMemberField" prefHeight="25.0" prefWidth="120.0" promptText="Username" />
+                        <Button fx:id="addMemberButton" mnemonicParsing="false" text="Add" />
+                     </children>
+                     <padding>
+                        <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
+                     </padding>
+                  </HBox>
+               </children>
+               <padding>
+                  <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
+               </padding>
+            </VBox>
+         </right>
+      </BorderPane>
+      <HBox alignment="CENTER_LEFT" spacing="5.0">
+         <children>
+            <Label text="Status:" />
+            <Label fx:id="connectionStatusLabel" text="Disconnected" />
+            <Pane HBox.hgrow="ALWAYS" />
+            <Button fx:id="loginButton" mnemonicParsing="false" text="Login" />
+            <Button fx:id="logoutButton" mnemonicParsing="false" text="Logout" />
+         </children>
+         <padding>
+            <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
+         </padding>
+      </HBox>
+   </children>
+</VBox>
