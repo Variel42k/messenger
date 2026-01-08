@@ -140,11 +140,11 @@ redis:
   auth:
     enabled: false
 
-# Настройки MinIO
-minio:
+# Настройки RustFS
+rustfs:
   auth:
-    rootUser: "minioadmin"
-    rootPassword: "minioadmin"
+    rootUser: "rustfsadmin"
+    rootPassword: "rustfsadmin"
 
 # Настройки JWT
 env:
@@ -255,7 +255,7 @@ Flyway используется для миграций базы данных. �
 s3:
   endpoint: "https://s3.amazonaws.com" # Для AWS S3
   # или
-  endpoint: "http://minio:9000" # Для MinIO
+  endpoint: "http://rustfs:9000" # Для RustFS
 ```
 
 2. Обновите учетные данные соответствующим образом в переменных окружения или конфигурации
