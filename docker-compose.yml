@@ -27,17 +27,17 @@ services:
       - messenger-network
     restart: unless-stopped
 
-  minio:
-    image: minio/minio:latest
-    container_name: messenger-minio
+  rustfs:
+    image: rustfs/rustfs:latest
+    container_name: messenger-rustfs
     environment:
-      MINIO_ROOT_USER: minioadmin
-      MINIO_ROOT_PASSWORD: minioadmin
+      RUSTFS_USER: rustfsadmin
+      RUSTFS_PASSWORD: rustfsadmin
     ports:
       - "9000:9000"
       - "9001:9001"
     volumes:
-      - minio_data:/data
+      - rustfs_data:/data
     command: server /data --console-address ":9001"
     networks:
       - messenger-network
@@ -53,13 +53,13 @@ services:
     depends_on:
       - postgres
       - redis
-      - minio
+      - rustfs
     environment:
       DB_HOST: postgres
       REDIS_HOST: redis
-      RUSTFS_ENDPOINT: http://minio:9000
-      S3_ACCESS_KEY: minioadmin
-      S3_SECRET_KEY: minioadmin
+      RUSTFS_ENDPOINT: http://rustfs:9000
+      S3_ACCESS_KEY: rustfsadmin
+      S3_SECRET_KEY: rustfsadmin
       S3_BUCKET_NAME: messenger-files
       JWT_SECRET: ${JWT_SECRET:-mySecretKeyForDevelopmentOnly}
     networks:
@@ -73,4 +73,4 @@ networks:
 volumes:
   postgres_data:
   redis_data:
-  minio_data:
+  rustfs_data:
