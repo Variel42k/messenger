@@ -28,12 +28,23 @@ function Help() {
           <li>Login with the same credentials as the web client</li>
         </ul>
         
+        <h4>{t('adminFeatures') || t('adminPanel')}</h4>
+        <ul>
+          <li>{t('userManager')}: Manage users, their roles and account status</li>
+          <li>{t('chatManager')}: Create, modify and delete chat rooms</li>
+          <li>{t('systemSettings')}: Configure system-wide settings and parameters</li>
+          <li>{t('userManagement')}: Monitor and control user activities</li>
+          <li>{t('chatManagement')}: Manage chat settings and permissions</li>
+          <li>{t('messageManagement')}: Review and moderate messages</li>
+        </ul>
+        
         <h4>{t('troubleshooting')}</h4>
         <ul>
           <li>If you can't connect to the server, check if it's running on port 8080</li>
           <li>Make sure your firewall allows connections to the server</li>
           <li>For Java client issues, ensure JavaFX libraries are properly installed</li>
           <li>Check the server logs for any authentication errors</li>
+          <li>If administrative features are not visible, ensure your account has ADMIN role</li>
         </ul>
       </div>
     </div>

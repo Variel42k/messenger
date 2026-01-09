@@ -74,7 +74,7 @@ public class Chat {
 
     public Set<UserChat> getMembers() { return members; }
     public void setMembers(Set<UserChat> members) { this.members = members; }
+public Set<Message> getMessages() { return messages; }
+public void setMessages(Set<Message> messages) { this.messages = messages; }
 
-    public Set<Message> getMessages() { return messages; }
-    public void setMessages(Set<Message> messages) { this.messages = messages; }
 }

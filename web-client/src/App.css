@@ -24,6 +24,14 @@ header h1 {
   margin: 0;
 }
 
+.header-controls select {
+  padding: 0.5rem;
+  border-radius: 4px;
+  background-color: #34495e;
+  color: white;
+  border: 1px solid #7f8c8d;
+}
+
 nav {
   display: flex;
   gap: 0.5rem;
@@ -42,10 +50,49 @@ nav button.active {
   background-color: #3498db;
 }
 
+.user-controls {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+}
+
+.username {
+  font-style: italic;
+}
+
 .app-main {
   flex: 1;
   display: flex;
   flex-direction: column;
   padding: 1rem;
   background-color: #ecf0f1;
+}
+
+.error-message {
+  color: #e74c3c;
+  margin-bottom: 1rem;
+  padding: 0.5rem;
+  background-color: #fadbd8;
+  border-radius: 4px;
+}
+
+.demo-credentials {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid #ddd;
+  font-size: 0.85em;
+  color: #7f8c8d;
+}
+
+.demo-credentials p {
+  margin: 0.25rem 0;
+}
+
+.unauthorized {
+  text-align: center;
+  padding: 2rem;
+}
+
+.unauthorized h2 {
+  color: #e74c3c;
 }

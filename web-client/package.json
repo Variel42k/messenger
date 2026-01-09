@@ -14,7 +14,9 @@
     "react-i18next": "^13.5.0",
     "i18next": "^23.7.6",
     "axios": "^1.6.0",
-    "websocket": "^1.0.34"
+    "websocket": "^1.0.34",
+    "i18next": "^23.7.6",
+    "react-i18next": "^13.5.0"
   },
   "devDependencies": {
     "@babel/core": "^7.23.0",
@@ -26,6 +28,7 @@
     "webpack-cli": "^5.1.0",
     "webpack-dev-server": "^4.15.0",
     "css-loader": "^6.8.0",
-    "style-loader": "^3.3.0"
+    "style-loader": "^3.3.0",
+    "json-loader": "^0.5.7"
   }
 }
