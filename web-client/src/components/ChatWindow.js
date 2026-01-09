@@ -8,8 +8,12 @@ function ChatWindow() {
     { id: 1, sender: 'System', content: t('helpContent'), isOwn: false }
   ]);
   const [inputValue, setInputValue] = useState('');
-  const [chats, setChats] = useState(['General', 'Project Discussion', 'Random']);
-  const [currentChat, setCurrentChat] = useState('General');
+  const [chats, setChats] = useState([
+    { id: 1, name: t('general'), type: 'GROUP', unread: 2, lastMessage: 'Hello everyone!' },
+    { id: 2, name: t('projectDiscussion') || t('project'), type: 'PRIVATE', unread: 0, lastMessage: 'Meeting at 3 PM' },
+    { id: 3, name: t('random'), type: 'GROUP', unread: 5, lastMessage: 'Check out this article' }
+  ]);
+  const [currentChat, setCurrentChat] = useState(chats[0]);
 
   const handleSend = () => {
     if (inputValue.trim() !== '') {
@@ -22,6 +26,13 @@ function ChatWindow() {
       };
       setMessages([...messages, newMessage]);
       setInputValue('');
+      
+      // Update the last message in the current chat
+      setChats(chats.map(chat =>
+        chat.id === currentChat.id
+          ? { ...chat, lastMessage: inputValue, unread: 0 }
+          : chat
+      ));
     }
   };
 
@@ -32,42 +43,63 @@ function ChatWindow() {
     }
   };
 
+  const handleCreateChat = () => {
+    const chatName = prompt(t('enterChatName') || 'Enter chat name:');
+    if (chatName) {
+      const newChat = {
+        id: chats.length + 1,
+        name: chatName,
+        type: 'GROUP',
+        unread: 0,
+        lastMessage: ''
+      };
+      setChats([...chats, newChat]);
+      setCurrentChat(newChat);
+    }
+  };
+
   return (
     <div className="chat-container">
       <div className="sidebar">
-        <h3>Chats</h3>
+        <div className="sidebar-header">
+          <h3>{t('chats')}</h3>
+          <button className="new-chat-btn" onClick={handleCreateChat}>+</button>
+        </div>
         <ul>
           {chats.map(chat => (
-            <li 
-              key={chat} 
-              className={currentChat === chat ? 'active' : ''}
+            <li
+              key={chat.id}
+              className={currentChat.id === chat.id ? 'active' : ''}
               onClick={() => setCurrentChat(chat)}
             >
-              {chat}
+              <div className="chat-info">
+                <div className="chat-name">{chat.name}</div>
+                <div className="chat-preview">{chat.lastMessage}</div>
+              </div>
+              {chat.unread > 0 && (
+                <div className="unread-count">{chat.unread}</div>
+              )}
             </li>
           ))}
         </ul>
-        <div className="new-chat">
-          <input type="text" placeholder="New chat name" />
-          <button>Create</button>
-        </div>
       </div>
 
       <div className="chat-area">
         <div className="chat-header">
-          <h3>{currentChat}</h3>
+          <h3>{currentChat.name}</h3>
+          <div className="chat-type">{t(currentChat.type.toLowerCase())}</div>
         </div>
 
         <div className="messages">
           {messages.map(message => (
-            <div 
-              key={message.id} 
+            <div
+              key={message.id}
               className={`message ${message.isOwn ? 'own' : ''}`}
             >
               <div className="message-sender">{message.sender}</div>
               <div className="message-content">{message.content}</div>
               <div className="message-time">
-                {message.timestamp ? message.timestamp.toLocaleTimeString() : ''}
+                {message.timestamp ? message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
               </div>
             </div>
           ))}
@@ -84,7 +116,7 @@ function ChatWindow() {
         </div>
       </div>
     </div>
- );
+  );
 }
 
 export default ChatWindow;

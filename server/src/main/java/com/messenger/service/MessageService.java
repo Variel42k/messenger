@@ -18,7 +18,7 @@ public class MessageService {
     }
 
     public List<Message> getChatMessages(Long chatId) {
-        return messageRepository.findByChatIdOrderByCreatedAtAsc(chatId);
+        return messageRepository.findByChat_IdOrderByCreatedAtAsc(chatId);
     }
 
     public Message saveMessage(Message message) {
@@ -36,6 +36,6 @@ public class MessageService {
     }
 
     public List<Message> getMessagesByStatus(Long chatId, MessageStatus status) {
-        return messageRepository.findByChatIdAndStatus(chatId, status);
+        return messageRepository.findByChat_IdAndStatus(chatId, status);
     }
 }
