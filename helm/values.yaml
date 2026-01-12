@@ -103,12 +103,12 @@ redis:
       enabled: true
       size: 8Gi
 
-# Конфигурация RustFS
-rustfs:
+# Конфигурация MinIO
+minio:
   enabled: true
   auth:
-    rootUser: "rustfsadmin"
-    rootPassword: "rustfsadmin"
+    rootUser: "minioadmin"
+    rootPassword: "minioadmin"
   persistence:
     enabled: true
     size: 10Gi
@@ -122,9 +122,9 @@ env:
   DB_PASSWORD: "password"
   REDIS_HOST: "messenger-redis-master"
   REDIS_PORT: "6379"
-  RUSTFS_ENDPOINT: "http://messenger-rustfs:9000"
-  S3_ACCESS_KEY: "rustfsadmin"
-  S3_SECRET_KEY: "rustfsadmin"
+  S3_ENDPOINT: "http://messenger-minio:9000"
+  S3_ACCESS_KEY: "minioadmin"
+  S3_SECRET_KEY: "minioadmin"
   S3_BUCKET_NAME: "messenger-files"
   JWT_SECRET: "mySecretKeyForDevelopmentOnly"
   JWT_ACCESS_TOKEN_EXPIRATION: "900000"

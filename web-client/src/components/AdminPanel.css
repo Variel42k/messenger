@@ -322,6 +322,11 @@
   margin-top: 5px;
 }
 
+/* LDAP settings styles */
+.ldap-settings-tab .settings-form {
+  max-width: 600px;
+}
+
 /* Responsive design */
 @media (max-width: 768px) {
   .admin-panel {

@@ -1,0 +1,3 @@
+ALTER TABLE chats
+ADD COLUMN is_encrypted BOOLEAN DEFAULT FALSE,
+ADD COLUMN encryption_key VARCHAR(255);

@@ -13,7 +13,7 @@ spring:
     driver-class-name: org.postgresql.Driver
   jpa:
     hibernate:
-      ddl-auto: validate
+      ddl-auto: update
     show-sql: false
     properties:
       hibernate:
@@ -22,6 +22,7 @@ spring:
   flyway:
     enabled: true
     locations: classpath:db/migration
+    validate-on-migrate: false
   redis:
     host: ${REDIS_HOST:localhost}
     port: ${REDIS_PORT:6379}
@@ -45,10 +46,19 @@ jwt:
   refresh-token-expiration: ${JWT_REFRESH_TOKEN_EXPIRATION:604800000} # 7 days in ms
 
 s3:
-  endpoint: ${RUSTFS_ENDPOINT:http://localhost:9000}
+  endpoint: ${S3_ENDPOINT:http://localhost:9000}
   access-key: ${S3_ACCESS_KEY:minioadmin}
   secret-key: ${S3_SECRET_KEY:minioadmin}
   bucket-name: ${S3_BUCKET_NAME:messenger-files}
+
+app:
+  ldap:
+    enabled: ${LDAP_ENABLED:false}
+    url: ${LDAP_URL:#{null}}
+    base-dn: ${LDAP_BASE_DN:#{null}}
+    user-dn-pattern: ${LDAP_USER_DN_PATTERN:#{null}}
+    manager-dn: ${LDAP_MANAGER_DN:#{null}}
+    manager-password: ${LDAP_MANAGER_PASSWORD:#{null}}
 
 logging:
   level:
@@ -115,7 +125,7 @@ jwt:
   secret: ${JWT_SECRET}
 
 s3:
-  endpoint: ${RUSTFS_ENDPOINT}
+  endpoint: ${S3_ENDPOINT}
   access-key: ${S3_ACCESS_KEY}
   secret-key: ${S3_SECRET_KEY}
   bucket-name: ${S3_BUCKET_NAME}

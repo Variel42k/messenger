@@ -18,6 +18,12 @@ public class Chat {
     @Enumerated(EnumType.STRING)
     private ChatType type;
 
+    @Column(name = "is_encrypted")
+    private Boolean encrypted = false;
+
+    @Column(name = "encryption_key")
+    private String encryptionKey;
+
     @Column(name = "avatar_url")
     private String avatarUrl;
 
@@ -43,6 +49,8 @@ public class Chat {
         this.name = name;
         this.type = type;
         this.createdById = createdById;
+        this.encrypted = false;
+        this.encryptionKey = null;
         this.createdAt = LocalDateTime.now();
         this.updatedAt = LocalDateTime.now();
     }
@@ -59,6 +67,12 @@ public class Chat {
 
     public ChatType getType() { return type; }
     public void setType(ChatType type) { this.type = type; }
+
+    public Boolean getEncrypted() { return encrypted != null ? encrypted : false; }
+    public void setEncrypted(Boolean encrypted) { this.encrypted = encrypted; }
+
+    public String getEncryptionKey() { return encryptionKey; }
+    public void setEncryptionKey(String encryptionKey) { this.encryptionKey = encryptionKey; }
 
     public String getAvatarUrl() { return avatarUrl; }
     public void setAvatarUrl(String avatarUrl) { this.avatarUrl = avatarUrl; }
