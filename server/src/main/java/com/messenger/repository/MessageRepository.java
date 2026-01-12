@@ -10,4 +10,13 @@ import java.util.List;
 public interface MessageRepository extends JpaRepository<Message, Long> {
     List<Message> findByChat_IdOrderByCreatedAtAsc(Long chatId);
     List<Message> findByChat_IdAndStatus(Long chatId, MessageStatus status);
+    
+    /**
+     * Удаляет сообщения, созданные до указанной даты
+     * Deletes messages created before the specified date
+     *
+     * @param beforeDate Дата, до которой удалять сообщения / Date before which to delete messages
+     * @return Количество удаленных сообщений / Number of deleted messages
+     */
+    int deleteByCreatedAtBefore(java.util.Date beforeDate);
 }

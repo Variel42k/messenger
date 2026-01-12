@@ -10,6 +10,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 @Service
 public class ChatService {
@@ -30,13 +31,26 @@ public class ChatService {
                 .toList();
     }
 
-    public Chat createChat(String name, ChatType type, Long createdById) {
+    public Chat createChat(String name, ChatType type, Boolean encrypted, String encryptionKey, Long createdById) {
         Chat chat = new Chat(name, type, createdById);
+        chat.setEncrypted(encrypted != null ? encrypted : false);
+        if (encrypted != null && encrypted) {
+            // Если шифрование включено, генерируем ключ если он не предоставлен
+            if (encryptionKey == null || encryptionKey.isEmpty()) {
+                chat.setEncryptionKey(generateEncryptionKey());
+            } else {
+                chat.setEncryptionKey(encryptionKey);
+            }
+        }
         Chat savedChat = chatRepository.save(chat);
         // Add creator as owner to the chat
         UserChat userChat = new UserChat(savedChat.getId(), createdById, ChatRole.OWNER);
         userChatRepository.save(userChat);
         return savedChat;
+    }
+
+    public Chat createChat(String name, ChatType type, Long createdById) {
+        return createChat(name, type, false, null, createdById);
     }
 
     public Chat addMemberToChat(Long chatId, Long userId, ChatRole role) {
@@ -47,5 +61,10 @@ public class ChatService {
 
     public Optional<Chat> getChatById(Long chatId) {
         return chatRepository.findById(chatId);
+    }
+
+    private String generateEncryptionKey() {
+        // Генерация случайного ключа шифрования
+        return UUID.randomUUID().toString();
     }
 }

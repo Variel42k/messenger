@@ -37,8 +37,14 @@ function AdminPanel() {
         return <UserManagementTab t={t} users={users} setUsers={setUsers} />;
       case 'chat-management':
         return <ChatManagementTab t={t} chats={chats} setChats={setChats} />;
+      case 'ldap-settings':
+        return <LdapSettingsTab t={t} />;
+      case 'security-policies':
+        return <SecurityPoliciesTab t={t} />;
       case 'system-settings':
         return <SystemSettingsTab t={t} />;
+      case 'help':
+        return <HelpTab t={t} />;
       default:
         return <DashboardTab t={t} users={users} chats={chats} />;
     }
@@ -59,29 +65,47 @@ function AdminPanel() {
         <h3>{t('adminPanel')}</h3>
         <nav>
           <ul>
-            <li 
+            <li
               className={activeTab === 'dashboard' ? 'active' : ''}
               onClick={() => setActiveTab('dashboard')}
             >
               {t('dashboard')}
             </li>
-            <li 
+            <li
               className={activeTab === 'user-management' ? 'active' : ''}
               onClick={() => setActiveTab('user-management')}
             >
               {t('userManagement')}
             </li>
-            <li 
+            <li
               className={activeTab === 'chat-management' ? 'active' : ''}
               onClick={() => setActiveTab('chat-management')}
             >
               {t('chatManagement')}
             </li>
-            <li 
+            <li
+              className={activeTab === 'ldap-settings' ? 'active' : ''}
+              onClick={() => setActiveTab('ldap-settings')}
+            >
+              {t('ldapSettings')}
+            </li>
+            <li
               className={activeTab === 'system-settings' ? 'active' : ''}
               onClick={() => setActiveTab('system-settings')}
             >
               {t('systemSettings')}
+            </li>
+            <li
+              className={activeTab === 'security-policies' ? 'active' : ''}
+              onClick={() => setActiveTab('security-policies')}
+            >
+              {t('securityPolicies')}
+            </li>
+            <li
+              className={activeTab === 'help' ? 'active' : ''}
+              onClick={() => setActiveTab('help')}
+            >
+              {t('help')}
             </li>
           </ul>
         </nav>
@@ -93,6 +117,7 @@ function AdminPanel() {
             {activeTab === 'dashboard' && t('dashboard')}
             {activeTab === 'user-management' && t('userManager')}
             {activeTab === 'chat-management' && t('chatManager')}
+            {activeTab === 'ldap-settings' && t('ldapSettings')}
             {activeTab === 'system-settings' && t('systemSettings')}
           </h2>
         </div>
@@ -539,6 +564,265 @@ function SystemSettingsTab({ t }) {
       </div>
     </div>
   );
+}
+
+// LDAP Settings Tab Component
+function LdapSettingsTab({ t }) {
+  const [ldapSettings, setLdapSettings] = useState({
+    enabled: false,
+    url: '',
+    baseDn: '',
+    userDnPattern: '',
+    managerDn: '',
+    managerPassword: ''
+  });
+
+  const [ldapHelpInfo, setLdapHelpInfo] = useState(null);
+  const [showHelp, setShowHelp] = useState(false);
+
+  // Загрузка справочной информации по LDAP при монтировании компонента
+  useEffect(() => {
+    const fetchLdapHelpInfo = async () => {
+      try {
+        const response = await fetch('/api/admin/ldap-configuration-help');
+        if (response.ok) {
+          const data = await response.json();
+          setLdapHelpInfo(data);
+        }
+      } catch (error) {
+        console.error('Error fetching LDAP help info:', error);
+      }
+    };
+
+    fetchLdapHelpInfo();
+  }, []);
+
+  const handleLdapSettingChange = (key, value) => {
+    setLdapSettings({
+      ...ldapSettings,
+      [key]: value
+    });
+  };
+
+  const handleToggleLdap = () => {
+    setLdapSettings({
+      ...ldapSettings,
+      enabled: !ldapSettings.enabled
+    });
+  };
+
+  const handleSaveLdapSettings = async () => {
+    // В реальном приложении это был бы API вызов для сохранения настроек LDAP
+    try {
+      const response = await fetch('/api/admin/ldap-settings', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(ldapSettings),
+      });
+
+      if (response.ok) {
+        alert(t('ldapSettingsSaved'));
+      } else {
+        alert(t('errorSavingLdapSettings'));
+      }
+    } catch (error) {
+      console.error('Error saving LDAP settings:', error);
+      alert(t('errorSavingLdapSettings'));
+    }
+  };
+
+  return (
+    <div className="ldap-settings-tab">
+      <h3>{t('ldapConfiguration')}</h3>
+      
+      <div className="settings-form">
+        <div className="form-group checkbox-group">
+          <label>
+            <input
+              type="checkbox"
+              checked={ldapSettings.enabled}
+              onChange={handleToggleLdap}
+            />
+            {t('enableLdapAuthentication')}
+          </label>
+          <small>{t('enableLdapDescription') || 'Enable LDAP authentication for user login.'}</small>
+        </div>
+        
+        {ldapSettings.enabled && (
+          <>
+            <div className="form-group">
+              <label>{t('ldapServerUrl')}:</label>
+              <input
+                type="text"
+                value={ldapSettings.url}
+                onChange={(e) => handleLdapSettingChange('url', e.target.value)}
+                placeholder="ldap://ldap.example.com:389"
+              />
+              <small>{t('ldapServerUrlDescription') || 'URL of the LDAP server (e.g., ldap://example.com:389)'}</small>
+            </div>
+            
+            <div className="form-group">
+              <label>{t('ldapBaseDn')}:</label>
+              <input
+                type="text"
+                value={ldapSettings.baseDn}
+                onChange={(e) => handleLdapSettingChange('baseDn', e.target.value)}
+                placeholder="dc=example,dc=com"
+              />
+              <small>{t('ldapBaseDnDescription') || 'Base DN for LDAP queries (e.g., dc=example,dc=com)'}</small>
+            </div>
+            
+            <div className="form-group">
+              <label>{t('ldapUserDnPattern')}:</label>
+              <input
+                type="text"
+                value={ldapSettings.userDnPattern}
+                onChange={(e) => handleLdapSettingChange('userDnPattern', e.target.value)}
+                placeholder="uid={0},ou=people"
+              />
+              <small>{t('ldapUserDnPatternDescription') || 'Pattern for user DNs (e.g., uid={0},ou=people)'}</small>
+            </div>
+            
+            <div className="form-group">
+              <label>{t('ldapManagerDn')}:</label>
+              <input
+                type="text"
+                value={ldapSettings.managerDn}
+                onChange={(e) => handleLdapSettingChange('managerDn', e.target.value)}
+                placeholder="cn=admin,dc=example,dc=com"
+              />
+              <small>{t('ldapManagerDnDescription') || 'DN of the LDAP manager account for binding'}</small>
+            </div>
+            
+            <div className="form-group">
+              <label>{t('ldapManagerPassword')}:</label>
+              <input
+                type="password"
+                value={ldapSettings.managerPassword}
+                onChange={(e) => handleLdapSettingChange('managerPassword', e.target.value)}
+                placeholder={t('enterPassword')}
+              />
+              <small>{t('ldapManagerPasswordDescription') || 'Password for the LDAP manager account'}</small>
+            </div>
+            
+            {/* Help section for LDAP domain configuration */}
+            <details className="ldap-help-section" style={{marginTop: '20px', padding: '15px', border: '1px solid #ccc', borderRadius: '5px', backgroundColor: '#f9f9f9'}}>
+              <summary style={{cursor: 'pointer', fontWeight: 'bold', marginBottom: '10px'}}>
+                {t('ldapDomainConfigurationHelp') || 'LDAP Domain Configuration Help'}
+              </summary>
+              
+              <div style={{marginTop: '10px'}} id="ldap-help-content">
+                {ldapHelpInfo ? (
+                  <>
+                    <h4>{t('windowsDomainConfiguration') || 'Windows Domain Configuration'}</h4>
+                    <p>{ldapHelpInfo.windowsDomainConfiguration?.description || 'To configure LDAP authentication with a Windows domain controller:'}</p>
+                    <ol style={{marginLeft: '20px'}}>
+                      {ldapHelpInfo.windowsDomainConfiguration?.steps?.map((step, index) => (
+                        <li key={index}>{step}</li>
+                      ))}
+                    </ol>
+                    
+                    <h4 style={{marginTop: '15px'}}>{t('linuxDomainConfiguration') || 'Linux Domain Configuration'}</h4>
+                    <p>{ldapHelpInfo.linuxDomainConfiguration?.description || 'To configure LDAP authentication with a Linux OpenLDAP server:'}</p>
+                    <ol style={{marginLeft: '20px'}}>
+                      {ldapHelpInfo.linuxDomainConfiguration?.steps?.map((step, index) => (
+                        <li key={index}>{step}</li>
+                      ))}
+                    </ol>
+                    
+                    <h4 style={{marginTop: '15px'}}>{t('commonLdapUrls') || 'Common LDAP URLs'}</h4>
+                    <ul style={{marginLeft: '20px'}}>
+                      <li><strong>{t('windowsLdapUrl') || 'Windows AD'}:</strong> {ldapHelpInfo.commonLdapUrls?.windowsLdapUrl || 'ldap://domain-controller.company.com:389 or ldaps://domain-controller.company.com:636'}</li>
+                      <li><strong>{t('openLdapUrl') || 'OpenLDAP'}:</strong> {ldapHelpInfo.commonLdapUrls?.openLdapUrl || 'ldap://ldap.example.com:389 or ldaps://ldap.example.com:636'}</li>
+                    </ul>
+                  </>
+                ) : (
+                  <p>{t('loading')}...</p>
+                )}
+              </div>
+            </details>
+          </>
+        )}
+        
+        <div className="form-actions">
+          <button className="btn btn-success" onClick={handleSaveLdapSettings} disabled={!ldapSettings.enabled}>
+            {t('saveLdapSettings')}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Help Tab Component
+function HelpTab({ t }) {
+ return (
+   <div className="help-tab">
+     <h3>{t('helpAndSupport')}</h3>
+     
+     <div className="help-content">
+       <section className="help-section">
+         <h4>{t('applicationOverview') || 'Application Overview'}</h4>
+         <p>{t('applicationOverviewDescription') || 'The Messenger application is a real-time communication platform that supports multiple protocols and authentication methods.'}</p>
+       </section>
+       
+       <section className="help-section">
+         <h4>{t('authenticationMethods') || 'Authentication Methods'}</h4>
+         <ul>
+           <li><strong>{t('standardAuthentication') || 'Standard Authentication'}:</strong> {t('standardAuthenticationDescription') || 'Username and password authentication against the internal database.'}</li>
+           <li><strong>{t('ldapAuthentication') || 'LDAP Authentication'}:</strong> {t('ldapAuthenticationDescription') || 'Enterprise authentication via LDAP/AD servers.'}</li>
+         </ul>
+       </section>
+       
+       <section className="help-section">
+         <h4>{t('ldapConfigurationTitle') || 'LDAP Configuration Guide'}</h4>
+         <div className="ldap-configuration-help">
+           <h5>{t('windowsDomainConfiguration') || 'Windows Domain Configuration'}</h5>
+           <p>{t('windowsDomainConfigurationDescription') || 'To configure LDAP authentication with a Windows domain controller:'}</p>
+           <ol>
+             <li>{t('windowsStep1') || 'Open Active Directory Users and Computers'}</li>
+             <li>{t('windowsStep2') || 'Navigate to the Organizational Unit (OU) containing users'}</li>
+             <li>{t('windowsStep3') || 'Identify the Base DN (e.g., DC=company,DC=com)'}</li>
+             <li>{t('windowsStep4') || 'Create a service account with read permissions to user data'}</li>
+             <li>{t('windowsStep5') || 'Use LDAPS (ldaps://) for secure connections'}</li>
+             <li>{t('windowsStep6') || 'Common user DN pattern: CN={0},OU=Users,DC=company,DC=com'}</li>
+           </ol>
+           
+           <h5 style={{marginTop: '15px'}}>{t('linuxDomainConfiguration') || 'Linux Domain Configuration'}</h5>
+           <p>{t('linuxDomainConfigurationDescription') || 'To configure LDAP authentication with a Linux OpenLDAP server:'}</p>
+           <ol>
+             <li>{t('linuxStep1') || 'Install and configure OpenLDAP server'}</li>
+             <li>{t('linuxStep2') || 'Set up directory structure and base DN'}</li>
+             <li>{t('linuxStep3') || 'Create bind user with appropriate permissions'}</li>
+             <li>{t('linuxStep4') || 'Configure SSL/TLS if required'}</li>
+             <li>{t('linuxStep5') || 'Common user DN pattern: uid={0},ou=people,dc=example,dc=com'}</li>
+           </ol>
+         </div>
+       </section>
+       
+       <section className="help-section">
+         <h4>{t('troubleshooting') || 'Troubleshooting'}</h4>
+         <ul>
+           <li><strong>{t('connectionIssues') || 'Connection Issues'}:</strong> {t('connectionIssuesDescription') || 'Check network connectivity and firewall settings for required ports (8080, 5432, 6379, 9000).'}</li>
+           <li><strong>{t('authenticationProblems') || 'Authentication Problems'}:</strong> {t('authenticationProblemsDescription') || 'Verify credentials and authentication method configuration.'}</li>
+           <li><strong>{t('ldapConnectionFailure') || 'LDAP Connection Failure'}:</strong> {t('ldapConnectionFailureDescription') || 'Verify LDAP server URL, base DN, and manager credentials.'}</li>
+         </ul>
+       </section>
+       
+       <section className="help-section">
+         <h4>{t('systemRequirements') || 'System Requirements'}</h4>
+         <ul>
+           <li>{t('minimumRam') || 'RAM: Minimum 4GB recommended for production use'}</li>
+           <li>{t('supportedDatabases') || 'Database: PostgreSQL 12+ or compatible'}</li>
+           <li>{t('supportedCache') || 'Cache: Redis 6+ for session and pub/sub'}</li>
+           <li>{t('supportedStorage') || 'Storage: S3-compatible object storage for file attachments'}</li>
+         </ul>
+       </section>
+     </div>
+   </div>
+ );
 }
 
 export default AdminPanel;

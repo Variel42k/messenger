@@ -186,7 +186,7 @@ kubectl apply -f k8s/manifests.yml
 - `DB_PORT`: Порт PostgreSQL (по умолчанию: 5432)
 - `DB_NAME`: Имя базы данных (по умолчанию: messenger)
 - `REDIS_HOST`: Хост Redis (по умолчанию: localhost)
-- `RUSTFS_ENDPOINT`: Совместимая с S3 конечная точка RustFS
+- `S3_ENDPOINT`: Совместимая с S3 конечная точка MinIO
 - `JWT_SECRET`: Секретный ключ для подписи JWT
 - `JWT_ACCESS_TOKEN_EXPIRATION`: Время жизни токена доступа (по умолчанию: 15м)
 - `JWT_REFRESH_TOKEN_EXPIRATION`: Время жизни токена обновления (по умолчанию: 7д)

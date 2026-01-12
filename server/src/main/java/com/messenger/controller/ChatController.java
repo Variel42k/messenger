@@ -43,7 +43,7 @@ public class ChatController {
     @PostMapping
     public ResponseEntity<Chat> createChat(@RequestBody CreateChatRequest request,
                                            @RequestParam Long createdById) {
-        Chat chat = chatService.createChat(request.getName(), request.getType(), createdById);
+        Chat chat = chatService.createChat(request.getName(), request.getType(), request.getEncrypted(), request.getEncryptionKey(), createdById);
         if (chat != null) {
             return ResponseEntity.ok(chat);
         } else {
@@ -93,6 +93,8 @@ public class ChatController {
 class CreateChatRequest {
     private String name;    // Название чата
     private ChatType type;  // Тип чата
+    private Boolean encrypted; // Флаг шифрования чата
+    private String encryptionKey; // Ключ шифрования
 
     // Геттеры и сеттеры
     public String getName() { return name; }
@@ -100,4 +102,10 @@ class CreateChatRequest {
 
     public ChatType getType() { return type; }
     public void setType(ChatType type) { this.type = type; }
+
+    public Boolean getEncrypted() { return encrypted != null ? encrypted : false; }
+    public void setEncrypted(Boolean encrypted) { this.encrypted = encrypted; }
+
+    public String getEncryptionKey() { return encryptionKey; }
+    public void setEncryptionKey(String encryptionKey) { this.encryptionKey = encryptionKey; }
 }
