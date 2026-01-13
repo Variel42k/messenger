@@ -1,5 +1,6 @@
 package com.messenger.service;
 
+import com.messenger.model.Chat;
 import com.messenger.model.Message;
 import com.messenger.model.enums.MessageStatus;
 import com.messenger.repository.MessageRepository;
@@ -12,16 +13,49 @@ import java.util.Optional;
 public class MessageService {
 
     private final MessageRepository messageRepository;
+    private final ChatService chatService;
+    private final EncryptionService encryptionService;
 
-    public MessageService(MessageRepository messageRepository) {
+    public MessageService(MessageRepository messageRepository, ChatService chatService, EncryptionService encryptionService) {
         this.messageRepository = messageRepository;
+        this.chatService = chatService;
+        this.encryptionService = encryptionService;
     }
 
     public List<Message> getChatMessages(Long chatId) {
-        return messageRepository.findByChat_IdOrderByCreatedAtAsc(chatId);
+        List<Message> messages = messageRepository.findByChat_IdOrderByCreatedAtAsc(chatId);
+        // Если чат зашифрован, расшифровываем сообщения перед возвратом
+        Chat chat = chatService.getChatById(chatId).orElse(null);
+        if (chat != null && chat.getEncrypted() && chat.getEncryptionKey() != null) {
+            for (Message msg : messages) {
+                if (msg.getContent() != null && !msg.getContent().isEmpty() && msg.isEncrypted()) {
+                    try {
+                        String decryptedContent = chatService.decryptMessage(msg.getContent(), chat.getEncryptionKey());
+                        msg.setContent(decryptedContent);
+                        msg.setEncrypted(false); // Указываем, что содержимое теперь в открытом виде
+                    } catch (Exception e) {
+                        // Логируем ошибку, но не прерываем выполнение
+                        System.err.println("Ошибка при расшифровке сообщения: " + e.getMessage());
+                    }
+                }
+            }
+        }
+        return messages;
     }
 
     public Message saveMessage(Message message) {
+        // Если чат зашифрован, шифруем сообщение перед сохранением
+        Chat chat = chatService.getChatById(message.getChat().getId()).orElse(null);
+        if (chat != null && chat.getEncrypted() && chat.getEncryptionKey() != null) {
+            try {
+                String encryptedContent = chatService.encryptMessage(message.getContent(), chat.getEncryptionKey());
+                message.setContent(encryptedContent);
+                message.setEncrypted(true); // Указываем, что содержимое зашифровано
+            } catch (Exception e) {
+                // Логируем ошибку, но не прерываем выполнение
+                System.err.println("Ошибка при шифровании сообщения: " + e.getMessage());
+            }
+        }
         return messageRepository.save(message);
     }
 

@@ -15,7 +15,6 @@ import java.util.Date;
 
 /**
  * Сервис для автоматической очистки устаревших данных
- * Data purge service for automatically cleaning up expired data
  */
 @Service
 public class DataPurgeService {
@@ -37,7 +36,6 @@ public class DataPurgeService {
 
     /**
      * Выполняет автоматическую очистку устаревших данных
-     * Performs automatic cleanup of expired data
      */
     @Scheduled(fixedRateString = "${app.purge-frequency:86400000}") // По умолчанию раз в день (86400000 мс)
     public void performAutomaticDataPurge() {
@@ -50,18 +48,16 @@ public class DataPurgeService {
 
         try {
             // Вычисляем дату, до которой удалять данные
-            // Calculate the date before which to delete data
             LocalDateTime cutoffDate = LocalDateTime.now().minusDays(dataRetentionPeriod);
             Date cutoffDateAsDate = Date.from(cutoffDate.atZone(ZoneId.systemDefault()).toInstant());
 
             // Удаляем старые сообщения
-            // Delete old messages
             int deletedMessages = messageRepository.deleteByCreatedAtBefore(cutoffDateAsDate);
             logger.info("Deleted {} messages older than {}", deletedMessages, cutoffDate);
 
             // Удаляем старые файлы, если они связаны с удаленными сообщениями
             // int deletedFiles = fileRepository.deleteOlderThan(cutoffDateAsDate);
-            // logger.info("Deleted {} files older than {}", deletedFiles, cutoffDate);
+            // logger.info("Удалено {} файлов старше {}", deletedFiles, cutoffDate);
 
             logger.info("Automatic data purge process completed successfully");
 
@@ -72,10 +68,9 @@ public class DataPurgeService {
 
     /**
      * Ручной запуск процесса очистки данных
-     * Manually trigger the data purge process
      *
-     * @param retentionPeriodDays Период хранения данных в днях / Data retention period in days
-     * @return Количество удаленных записей / Number of deleted records
+     * @param retentionPeriodDays Период хранения данных в днях
+     * @return Количество удаленных записей
      */
     public int manualPurge(int retentionPeriodDays) {
         if (!automaticDataPurgeEnabled) {
@@ -93,7 +88,7 @@ public class DataPurgeService {
             logger.info("Manually deleted {} messages older than {}", deletedMessages, cutoffDate);
 
             // int deletedFiles = fileRepository.deleteOlderThan(cutoffDateAsDate);
-            // logger.info("Manually deleted {} files older than {}", deletedFiles, cutoffDate);
+            // logger.info("Вручную удалено {} файлов старше {}", deletedFiles, cutoffDate);
 
             return deletedMessages;
 

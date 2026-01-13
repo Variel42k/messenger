@@ -347,3 +347,147 @@
     flex-direction: column;
   }
 }
+
+/* Стили для модального окна управления участниками чата */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.modal-content {
+  background-color: white;
+  border-radius: 8px;
+  width: 600px;
+  max-width: 90%;
+  max-height: 90%;
+  overflow-y: auto;
+  box-shadow: 0 4px 6px rgba(0, 0, 0.1);
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+  border-bottom: 1px solid #eee;
+}
+
+.modal-header h3 {
+  margin: 0;
+}
+
+.close-btn {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  color: #666;
+}
+
+.modal-body {
+  padding: 1rem;
+}
+
+.chat-members-section, .add-member-section {
+  margin-bottom: 1.5rem;
+}
+
+.members-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 0.5rem;
+}
+
+.members-table th, .members-table td {
+  padding: 0.5rem;
+  text-align: left;
+  border-bottom: 1px solid #ddd;
+}
+
+.members-table th {
+  background-color: #f8f9fa;
+  font-weight: bold;
+}
+
+.add-member-controls {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  margin-top: 0.5rem;
+}
+
+.add-member-controls select {
+  flex: 1;
+}
+
+.security-level-badge {
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  font-weight: bold;
+  color: white;
+}
+
+.security-level-badge.secure {
+  background-color: #4caf50; /* зеленый для безопасного */
+}
+
+.security-level-badge.limited {
+  background-color: #ff9800; /* желтый для ограниченной защиты */
+}
+
+.security-level-badge.unsecure {
+  background-color: #f44336; /* красный для небезопасного */
+}
+
+/* Security Policies Tab Styles */
+.security-policies-tab .settings-form {
+  max-width: 600px;
+}
+
+.security-policies-tab .form-group {
+  margin-bottom: 20px;
+}
+
+.security-policies-tab .form-group.checkbox-group {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.security-policies-tab .form-group label {
+  margin-bottom: 5px;
+  font-weight: bold;
+  color: #2c3e50;
+}
+
+.security-policies-tab .form-group input[type="checkbox"] {
+  margin-right: 10px;
+}
+
+.security-policies-tab .form-group input[type="number"] {
+  width: 100%;
+  padding: 8px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 1em;
+}
+
+.security-policies-tab small {
+  display: block;
+  color: #7f8c8d;
+  margin-top: 5px;
+  font-size: 0.9em;
+}
+
+.security-policies-tab .form-actions {
+  margin-top: 30px;
+}

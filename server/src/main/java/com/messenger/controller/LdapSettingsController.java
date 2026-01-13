@@ -58,7 +58,6 @@ public class LdapSettingsController {
 
     /**
      * Возвращает справочную информацию по настройке LDAP для различных типов доменов
-     * Provides help information for configuring LDAP with different domain types
      */
     @GetMapping("/ldap-configuration-help")
     public ResponseEntity<Map<String, Object>> getLdapConfigurationHelp() {
@@ -66,31 +65,31 @@ public class LdapSettingsController {
 
         // Информация о настройке домена Windows
         Map<String, Object> windowsConfig = new HashMap<>();
-        windowsConfig.put("description", "How to configure LDAP authentication with a Windows domain controller:");
+        windowsConfig.put("description", "Как настроить аутентификацию LDAP с контроллером домена Windows:");
         windowsConfig.put("steps", Arrays.asList(
-            "Open Active Directory Users and Computers",
-            "Navigate to the Organizational Unit (OU) containing users",
-            "Identify the Base DN (e.g., DC=company,DC=com)",
-            "Create a service account with read permissions to user data",
-            "Use LDAPS (ldaps://) for secure connections",
-            "Common user DN pattern: CN={0},OU=Users,DC=company,DC=com"
+            "Откройте Active Directory Users and Computers",
+            "Перейдите к организационному подразделению (OU), содержащему пользователей",
+            "Определите базовый DN (например, DC=company,DC=com)",
+            "Создайте служебную учетную запись с правами чтения данных пользователей",
+            "Используйте LDAPS (ldaps://) для безопасных подключений",
+            "Общий шаблон DN пользователя: CN={0},OU=Users,DC=company,DC=com"
         ));
 
         // Информация о настройке домена Linux
         Map<String, Object> linuxConfig = new HashMap<>();
-        linuxConfig.put("description", "How to configure LDAP authentication with a Linux OpenLDAP server:");
+        linuxConfig.put("description", "Как настроить аутентификацию LDAP с сервером Linux OpenLDAP:");
         linuxConfig.put("steps", Arrays.asList(
-            "Install and configure OpenLDAP server",
-            "Set up directory structure and base DN",
-            "Create bind user with appropriate permissions",
-            "Configure SSL/TLS if required",
-            "Common user DN pattern: uid={0},ou=people,dc=example,dc=com"
+            "Установите и настройте сервер OpenLDAP",
+            "Настройте структуру каталогов и базовый DN",
+            "Создайте пользователя привязки с соответствующими разрешениями",
+            "Настройте SSL/TLS при необходимости",
+            "Общий шаблон DN пользователя: uid={0},ou=people,dc=example,dc=com"
         ));
 
         // Общие URL-адреса LDAP
         Map<String, String> commonUrls = new HashMap<>();
-        commonUrls.put("windowsLdapUrl", "ldap://domain-controller.company.com:389 or ldaps://domain-controller.company.com:636");
-        commonUrls.put("openLdapUrl", "ldap://ldap.example.com:389 or ldaps://ldap.example.com:636");
+        commonUrls.put("windowsLdapUrl", "ldap://domain-controller.company.com:389 или ldaps://domain-controller.company.com:636");
+        commonUrls.put("openLdapUrl", "ldap://ldap.example.com:389 или ldaps://ldap.example.com:636");
 
         helpInfo.put("windowsDomainConfiguration", windowsConfig);
         helpInfo.put("linuxDomainConfiguration", linuxConfig);
