@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import './AdminPanel.css';
+import SecurityPoliciesTab from './SecurityPoliciesTab';
 
 function AdminPanel() {
  const { t } = useTranslation();
@@ -9,12 +10,12 @@ function AdminPanel() {
   const [chats, setChats] = useState([]);
   const [currentUser, setCurrentUser] = useState(null);
 
-  // Mock data for demonstration
+  // Моковые данные для демонстрации
   useEffect(() => {
-    // Simulate fetching current user role
+    // Имитация получения роли текущего пользователя
     setCurrentUser({ username: 'admin', role: 'ADMIN' });
     
-    // Mock users data
+    // Моковые данные пользователей
     setUsers([
       { id: 1, username: 'admin', email: 'admin@messenger.local', role: 'ADMIN', status: 'ACTIVE', firstName: 'Admin', lastName: 'User', createdAt: '2026-01-01' },
       { id: 2, username: 'user1', email: 'user1@example.com', role: 'USER', status: 'ACTIVE', firstName: 'John', lastName: 'Doe', createdAt: '2026-01-05' },
@@ -197,7 +198,7 @@ function UserManagementTab({ t, users, setUsers }) {
   
   const handleAddUser = (e) => {
     e.preventDefault();
-    // In a real application, this would be an API call
+    // В реальном приложении это был бы вызов API
     const userToAdd = {
       id: users.length + 1,
       ...newUser,
@@ -351,7 +352,7 @@ function UserManagementTab({ t, users, setUsers }) {
 function ChatManagementTab({ t, chats, setChats }) {
   const [searchTerm, setSearchTerm] = useState('');
   const [showAddChatForm, setShowAddChatForm] = useState(false);
-  const [newChat, setNewChat] = useState({ name: '', type: 'GROUP', description: '' });
+  const [newChat, setNewChat] = useState({ name: '', type: 'GROUP', description: '', encrypted: false, securityLevel: 'LIMITED' });
   
   const filteredChats = chats.filter(chat => 
     chat.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -360,7 +361,7 @@ function ChatManagementTab({ t, chats, setChats }) {
   
   const handleAddChat = (e) => {
     e.preventDefault();
-    // In a real application, this would be an API call
+    // В реальном приложении это был бы вызов API
     const chatToAdd = {
       id: chats.length + 1,
       ...newChat,
@@ -377,6 +378,147 @@ function ChatManagementTab({ t, chats, setChats }) {
       setChats(chats.filter(chat => chat.id !== chatId));
     }
   };
+
+  const [showChatMembersModal, setShowChatMembersModal] = useState(false);
+  const [currentChatId, setCurrentChatId] = useState(null);
+  const [chatMembers, setChatMembers] = useState([]);
+  const [availableUsers, setAvailableUsers] = useState([]);
+  const [selectedUser, setSelectedUser] = useState('');
+  const [selectedRole, setSelectedRole] = useState('MEMBER');
+
+  const handleManageChatMembers = (chatId) => {
+    // Загрузка участников чата и доступных пользователей
+    setCurrentChatId(chatId);
+    // В реальном приложении здесь будет вызов API для получения участников чата и всех пользователей
+    setChatMembers([
+      { id: 1, username: 'admin', role: 'OWNER' },
+      { id: 2, username: 'user1', role: 'MEMBER' },
+      { id: 3, username: 'user2', role: 'MODERATOR' }
+    ]);
+    setAvailableUsers([
+      { id: 4, username: 'user3' },
+      { id: 5, username: 'user4' },
+      { id: 6, username: 'user5' }
+    ]);
+    setShowChatMembersModal(true);
+  };
+
+  const handleAddMember = () => {
+    if (selectedUser) {
+      // В реальном приложении здесь будет вызов API для добавления участника
+      const userToAdd = availableUsers.find(u => u.id === parseInt(selectedUser));
+      if (userToAdd) {
+        setChatMembers([...chatMembers, { ...userToAdd, role: selectedRole }]);
+        setAvailableUsers(availableUsers.filter(u => u.id !== parseInt(selectedUser)));
+        setSelectedUser('');
+      }
+    }
+  };
+
+  const handleRemoveMember = (userId) => {
+    const userToRemove = chatMembers.find(m => m.id === userId);
+    if (userToRemove) {
+      // В реальном приложении здесь будет вызов API для удаления участника
+      setChatMembers(chatMembers.filter(m => m.id !== userId));
+      setAvailableUsers([...availableUsers, { id: userToRemove.id, username: userToRemove.username }]);
+    }
+  };
+
+  const handleUpdateRole = (userId, newRole) => {
+    // В реальном приложении здесь будет вызов API для обновления роли
+    setChatMembers(chatMembers.map(member =>
+      member.id === userId ? { ...member, role: newRole } : member
+    ));
+  };
+
+  const closeChatMembersModal = () => {
+    setShowChatMembersModal(false);
+    setCurrentChatId(null);
+  };
+
+  const ChatMembersModal = () => {
+    if (!showChatMembersModal) return null;
+
+    return (
+      <div className="modal-overlay" onClick={closeChatMembersModal}>
+        <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+          <div className="modal-header">
+            <h3>{t('manageChatMembers')}</h3>
+            <button className="close-btn" onClick={closeChatMembersModal}>×</button>
+          </div>
+          <div className="modal-body">
+            <div className="chat-members-section">
+              <h4>{t('currentMembers')}</h4>
+              <table className="members-table">
+                <thead>
+                  <tr>
+                    <th>{t('username')}</th>
+                    <th>{t('role')}</th>
+                    <th>{t('actions')}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {chatMembers.map(member => (
+                    <tr key={member.id}>
+                      <td>{member.username}</td>
+                      <td>
+                        <select
+                          value={member.role}
+                          onChange={(e) => handleUpdateRole(member.id, e.target.value)}
+                        >
+                          <option value="MEMBER">{t('member')}</option>
+                          <option value="MODERATOR">{t('moderator')}</option>
+                          <option value="ADMIN">{t('admin')}</option>
+                        </select>
+                      </td>
+                      <td>
+                        <button
+                          className="btn btn-danger btn-small"
+                          onClick={() => handleRemoveMember(member.id)}
+                        >
+                          {t('remove')}
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            
+            <div className="add-member-section">
+              <h4>{t('addMember')}</h4>
+              <div className="add-member-controls">
+                <select
+                  value={selectedUser}
+                  onChange={(e) => setSelectedUser(e.target.value)}
+                >
+                  <option value="">{t('selectUser')}</option>
+                  {availableUsers.map(user => (
+                    <option key={user.id} value={user.id}>{user.username}</option>
+                  ))}
+                </select>
+                <select
+                  value={selectedRole}
+                  onChange={(e) => setSelectedRole(e.target.value)}
+                >
+                  <option value="MEMBER">{t('member')}</option>
+                  <option value="MODERATOR">{t('moderator')}</option>
+                  <option value="ADMIN">{t('admin')}</option>
+                </select>
+                <button
+                  className="btn btn-primary"
+                  onClick={handleAddMember}
+                  disabled={!selectedUser}
+                >
+                  {t('add')}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
   
   return (
     <div className="chat-management-tab">
@@ -388,8 +530,8 @@ function ChatManagementTab({ t, chats, setChats }) {
           onChange={(e) => setSearchTerm(e.target.value)}
           className="search-input"
         />
-        <button 
-          className="btn btn-primary" 
+        <button
+          className="btn btn-primary"
           onClick={() => setShowAddChatForm(!showAddChatForm)}
         >
           {t('createChat')}
@@ -419,6 +561,27 @@ function ChatManagementTab({ t, chats, setChats }) {
               <option value="CHANNEL">{t('channel')}</option>
             </select>
           </div>
+          <div className="form-group checkbox-group">
+            <label>
+              <input
+                type="checkbox"
+                checked={newChat.encrypted || false}
+                onChange={(e) => setNewChat({...newChat, encrypted: e.target.checked})}
+              />
+              {t('encrypted')}
+            </label>
+          </div>
+          <div className="form-group">
+            <label>{t('securityLevel')}:</label>
+            <select
+              value={newChat.securityLevel || 'LIMITED'}
+              onChange={(e) => setNewChat({...newChat, securityLevel: e.target.value})}
+            >
+              <option value="SECURE">{t('secure')}</option>
+              <option value="LIMITED">{t('limited')}</option>
+              <option value="UNSECURE">{t('unsecure')}</option>
+            </select>
+          </div>
           <div className="form-group">
             <label>{t('description')}:</label>
             <textarea
@@ -428,9 +591,9 @@ function ChatManagementTab({ t, chats, setChats }) {
           </div>
           <div className="form-actions">
             <button type="submit" className="btn btn-success">{t('save')}</button>
-            <button 
-              type="button" 
-              className="btn btn-secondary" 
+            <button
+              type="button"
+              className="btn btn-secondary"
               onClick={() => setShowAddChatForm(false)}
             >
               {t('cancel')}
@@ -448,6 +611,7 @@ function ChatManagementTab({ t, chats, setChats }) {
               <th>{t('chatType')}</th>
               <th>{t('description')}</th>
               <th>{t('members')}</th>
+              <th>{t('securityLevel')}</th>
               <th>{t('date') || t('userCreatedAt')}</th>
               <th>{t('actions')}</th>
             </tr>
@@ -464,13 +628,25 @@ function ChatManagementTab({ t, chats, setChats }) {
                 </td>
                 <td>{chat.description}</td>
                 <td>{chat.memberCount}</td>
+                <td>
+                  <span className={`security-level-badge ${chat.securityLevel ? chat.securityLevel.toLowerCase() : 'unsecure'}`}>
+                    {chat.encrypted ? (chat.securityLevel ? t(chat.securityLevel.toLowerCase()) : t('secure')) : t('unsecure')}
+                  </span>
+                </td>
                 <td>{chat.createdAt}</td>
                 <td>
-                  <button 
+                  <button
                     className="btn btn-danger btn-small"
                     onClick={() => handleDeleteChat(chat.id)}
                   >
                     {t('delete')}
+                  </button>
+                  <button
+                    className="btn btn-info btn-small"
+                    onClick={() => handleManageChatMembers(chat.id)}
+                    style={{ marginLeft: '5px' }}
+                  >
+                    {t('manageMembers')}
                   </button>
                 </td>
               </tr>
@@ -499,7 +675,7 @@ function SystemSettingsTab({ t }) {
   };
   
   const handleSaveSettings = () => {
-    // In a real application, this would be an API call
+    // В реальном приложении это был бы вызов API
     alert(t('settingsSaved'));
   };
   
@@ -612,7 +788,7 @@ function LdapSettingsTab({ t }) {
   };
 
   const handleSaveLdapSettings = async () => {
-    // В реальном приложении это был бы API вызов для сохранения настроек LDAP
+    // В реальном приложении это был бы вызов API для сохранения настроек LDAP
     try {
       const response = await fetch('/api/admin/ldap-settings', {
         method: 'POST',
@@ -756,73 +932,74 @@ function LdapSettingsTab({ t }) {
   );
 }
 
+
 // Help Tab Component
 function HelpTab({ t }) {
- return (
-   <div className="help-tab">
-     <h3>{t('helpAndSupport')}</h3>
+return (
+ <div className="help-tab">
+   <h3>{t('helpAndSupport')}</h3>
+   
+   <div className="help-content">
+     <section className="help-section">
+       <h4>{t('applicationOverview') || 'Application Overview'}</h4>
+       <p>{t('applicationOverviewDescription') || 'The Messenger application is a real-time communication platform that supports multiple protocols and authentication methods.'}</p>
+     </section>
      
-     <div className="help-content">
-       <section className="help-section">
-         <h4>{t('applicationOverview') || 'Application Overview'}</h4>
-         <p>{t('applicationOverviewDescription') || 'The Messenger application is a real-time communication platform that supports multiple protocols and authentication methods.'}</p>
-       </section>
-       
-       <section className="help-section">
-         <h4>{t('authenticationMethods') || 'Authentication Methods'}</h4>
-         <ul>
-           <li><strong>{t('standardAuthentication') || 'Standard Authentication'}:</strong> {t('standardAuthenticationDescription') || 'Username and password authentication against the internal database.'}</li>
-           <li><strong>{t('ldapAuthentication') || 'LDAP Authentication'}:</strong> {t('ldapAuthenticationDescription') || 'Enterprise authentication via LDAP/AD servers.'}</li>
-         </ul>
-       </section>
-       
-       <section className="help-section">
-         <h4>{t('ldapConfigurationTitle') || 'LDAP Configuration Guide'}</h4>
-         <div className="ldap-configuration-help">
-           <h5>{t('windowsDomainConfiguration') || 'Windows Domain Configuration'}</h5>
-           <p>{t('windowsDomainConfigurationDescription') || 'To configure LDAP authentication with a Windows domain controller:'}</p>
-           <ol>
-             <li>{t('windowsStep1') || 'Open Active Directory Users and Computers'}</li>
-             <li>{t('windowsStep2') || 'Navigate to the Organizational Unit (OU) containing users'}</li>
-             <li>{t('windowsStep3') || 'Identify the Base DN (e.g., DC=company,DC=com)'}</li>
-             <li>{t('windowsStep4') || 'Create a service account with read permissions to user data'}</li>
-             <li>{t('windowsStep5') || 'Use LDAPS (ldaps://) for secure connections'}</li>
-             <li>{t('windowsStep6') || 'Common user DN pattern: CN={0},OU=Users,DC=company,DC=com'}</li>
-           </ol>
-           
-           <h5 style={{marginTop: '15px'}}>{t('linuxDomainConfiguration') || 'Linux Domain Configuration'}</h5>
-           <p>{t('linuxDomainConfigurationDescription') || 'To configure LDAP authentication with a Linux OpenLDAP server:'}</p>
-           <ol>
-             <li>{t('linuxStep1') || 'Install and configure OpenLDAP server'}</li>
-             <li>{t('linuxStep2') || 'Set up directory structure and base DN'}</li>
-             <li>{t('linuxStep3') || 'Create bind user with appropriate permissions'}</li>
-             <li>{t('linuxStep4') || 'Configure SSL/TLS if required'}</li>
-             <li>{t('linuxStep5') || 'Common user DN pattern: uid={0},ou=people,dc=example,dc=com'}</li>
-           </ol>
-         </div>
-       </section>
-       
-       <section className="help-section">
-         <h4>{t('troubleshooting') || 'Troubleshooting'}</h4>
-         <ul>
-           <li><strong>{t('connectionIssues') || 'Connection Issues'}:</strong> {t('connectionIssuesDescription') || 'Check network connectivity and firewall settings for required ports (8080, 5432, 6379, 9000).'}</li>
-           <li><strong>{t('authenticationProblems') || 'Authentication Problems'}:</strong> {t('authenticationProblemsDescription') || 'Verify credentials and authentication method configuration.'}</li>
-           <li><strong>{t('ldapConnectionFailure') || 'LDAP Connection Failure'}:</strong> {t('ldapConnectionFailureDescription') || 'Verify LDAP server URL, base DN, and manager credentials.'}</li>
-         </ul>
-       </section>
-       
-       <section className="help-section">
-         <h4>{t('systemRequirements') || 'System Requirements'}</h4>
-         <ul>
-           <li>{t('minimumRam') || 'RAM: Minimum 4GB recommended for production use'}</li>
-           <li>{t('supportedDatabases') || 'Database: PostgreSQL 12+ or compatible'}</li>
-           <li>{t('supportedCache') || 'Cache: Redis 6+ for session and pub/sub'}</li>
-           <li>{t('supportedStorage') || 'Storage: S3-compatible object storage for file attachments'}</li>
-         </ul>
-       </section>
-     </div>
+     <section className="help-section">
+       <h4>{t('authenticationMethods') || 'Authentication Methods'}</h4>
+       <ul>
+         <li><strong>{t('standardAuthentication') || 'Standard Authentication'}:</strong> {t('standardAuthenticationDescription') || 'Username and password authentication against the internal database.'}</li>
+         <li><strong>{t('ldapAuthentication') || 'LDAP Authentication'}:</strong> {t('ldapAuthenticationDescription') || 'Enterprise authentication via LDAP/AD servers.'}</li>
+       </ul>
+     </section>
+     
+     <section className="help-section">
+       <h4>{t('ldapConfigurationTitle') || 'LDAP Configuration Guide'}</h4>
+       <div className="ldap-configuration-help">
+         <h5>{t('windowsDomainConfiguration') || 'Windows Domain Configuration'}</h5>
+         <p>{t('windowsDomainConfigurationDescription') || 'To configure LDAP authentication with a Windows domain controller:'}</p>
+         <ol>
+           <li>{t('windowsStep1') || 'Open Active Directory Users and Computers'}</li>
+           <li>{t('windowsStep2') || 'Navigate to the Organizational Unit (OU) containing users'}</li>
+           <li>{t('windowsStep3') || 'Identify the Base DN (e.g., DC=company,DC=com)'}</li>
+           <li>{t('windowsStep4') || 'Create a service account with read permissions to user data'}</li>
+           <li>{t('windowsStep5') || 'Use LDAPS (ldaps://) for secure connections'}</li>
+           <li>{t('windowsStep6') || 'Common user DN pattern: CN={0},OU=Users,DC=company,DC=com'}</li>
+         </ol>
+         
+         <h5 style={{marginTop: '15px'}}>{t('linuxDomainConfiguration') || 'Linux Domain Configuration'}</h5>
+         <p>{t('linuxDomainConfigurationDescription') || 'To configure LDAP authentication with a Linux OpenLDAP server:'}</p>
+         <ol>
+           <li>{t('linuxStep1') || 'Install and configure OpenLDAP server'}</li>
+           <li>{t('linuxStep2') || 'Set up directory structure and base DN'}</li>
+           <li>{t('linuxStep3') || 'Create bind user with appropriate permissions'}</li>
+           <li>{t('linuxStep4') || 'Configure SSL/TLS if required'}</li>
+           <li>{t('linuxStep5') || 'Common user DN pattern: uid={0},ou=people,dc=example,dc=com'}</li>
+         </ol>
+       </div>
+     </section>
+     
+     <section className="help-section">
+       <h4>{t('troubleshooting') || 'Troubleshooting'}</h4>
+       <ul>
+         <li><strong>{t('connectionIssues') || 'Connection Issues'}:</strong> {t('connectionIssuesDescription') || 'Check network connectivity and firewall settings for required ports (8080, 5432, 6379, 9000).'}</li>
+         <li><strong>{t('authenticationProblems') || 'Authentication Problems'}:</strong> {t('authenticationProblemsDescription') || 'Verify credentials and authentication method configuration.'}</li>
+         <li><strong>{t('ldapConnectionFailure') || 'LDAP Connection Failure'}:</strong> {t('ldapConnectionFailureDescription') || 'Verify LDAP server URL, base DN, and manager credentials.'}</li>
+       </ul>
+     </section>
+     
+     <section className="help-section">
+       <h4>{t('systemRequirements') || 'System Requirements'}</h4>
+       <ul>
+         <li>{t('minimumRam') || 'RAM: Minimum 4GB recommended for production use'}</li>
+         <li>{t('supportedDatabases') || 'Database: PostgreSQL 12+ or compatible'}</li>
+         <li>{t('supportedCache') || 'Cache: Redis 6+ for session and pub/sub'}</li>
+         <li>{t('supportedStorage') || 'Storage: S3-compatible object storage for file attachments'}</li>
+       </ul>
+     </section>
    </div>
- );
+ </div>
+);
 }
 
 export default AdminPanel;

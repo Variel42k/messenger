@@ -173,7 +173,7 @@ public class MainController {
             helpStage.setTitle(resourceBundle.getString("help"));
             helpStage.setScene(helpScene);
             helpStage.setResizable(false);
-            helpStage.show();
+176 |             helpStage.show();
         } catch (Exception e) {
             e.printStackTrace();
             Alert alert = new Alert(Alert.AlertType.ERROR);
@@ -288,5 +288,10 @@ public class MainController {
         public String getSender() { return sender; }
         public String getContent() { return content; }
         public boolean isFromCurrentUser() { return isFromCurrentUser; }
+        
+        @Override
+        public String toString() {
+            return sender + ": " + content;
+        }
     }
 }

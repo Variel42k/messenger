@@ -24,6 +24,12 @@ public class Chat {
     @Column(name = "encryption_key")
     private String encryptionKey;
 
+    @Column(name = "encryption_algorithm")
+    private String encryptionAlgorithm = "AES";
+
+    @Column(name = "security_level")
+    private String securityLevel = "LIMITED"; // Values: "SECURE", "LIMITED", "UNSECURE"
+
     @Column(name = "avatar_url")
     private String avatarUrl;
 
@@ -51,6 +57,8 @@ public class Chat {
         this.createdById = createdById;
         this.encrypted = false;
         this.encryptionKey = null;
+        this.encryptionAlgorithm = "AES";
+        this.securityLevel = "LIMITED";
         this.createdAt = LocalDateTime.now();
         this.updatedAt = LocalDateTime.now();
     }
@@ -73,6 +81,12 @@ public class Chat {
 
     public String getEncryptionKey() { return encryptionKey; }
     public void setEncryptionKey(String encryptionKey) { this.encryptionKey = encryptionKey; }
+
+    public String getEncryptionAlgorithm() { return encryptionAlgorithm; }
+    public void setEncryptionAlgorithm(String encryptionAlgorithm) { this.encryptionAlgorithm = encryptionAlgorithm; }
+
+    public String getSecurityLevel() { return securityLevel; }
+    public void setSecurityLevel(String securityLevel) { this.securityLevel = securityLevel; }
 
     public String getAvatarUrl() { return avatarUrl; }
     public void setAvatarUrl(String avatarUrl) { this.avatarUrl = avatarUrl; }

@@ -8,10 +8,26 @@ function ChatWindow() {
     { id: 1, sender: 'System', content: t('helpContent'), isOwn: false }
   ]);
   const [inputValue, setInputValue] = useState('');
+  const [memberToAdd, setMemberToAdd] = useState('');
+  
+  const handleAddMember = () => {
+    if (memberToAdd.trim() !== '') {
+      // В реальном приложении здесь будет вызов API для добавления участника в чат
+      alert(`${t('addingMember')} "${memberToAdd}" ${t('toChat')} "${currentChat.name}"`);
+      setMemberToAdd('');
+    }
+  };
+  
+  const handleFileUpload = (file) => {
+    if (file) {
+      // В реальном приложении здесь будет логика для загрузки файла
+      alert(`${t('uploadingFile')} "${file.name}" ${t('toChat')} "${currentChat.name}"`);
+    }
+  };
   const [chats, setChats] = useState([
-    { id: 1, name: t('general'), type: 'GROUP', unread: 2, lastMessage: 'Hello everyone!' },
-    { id: 2, name: t('projectDiscussion') || t('project'), type: 'PRIVATE', unread: 0, lastMessage: 'Meeting at 3 PM' },
-    { id: 3, name: t('random'), type: 'GROUP', unread: 5, lastMessage: 'Check out this article' }
+    { id: 1, name: t('general'), type: 'GROUP', encrypted: true, securityLevel: 'SECURE', memberCount: 5, unread: 2, lastMessage: 'Hello everyone!' },
+    { id: 2, name: t('projectDiscussion') || t('project'), type: 'PRIVATE', encrypted: false, securityLevel: 'UNSECURE', memberCount: 3, unread: 0, lastMessage: 'Meeting at 3 PM' },
+    { id: 3, name: t('random'), type: 'GROUP', encrypted: true, securityLevel: 'LIMITED', memberCount: 12, unread: 5, lastMessage: 'Check out this article' }
   ]);
   const [currentChat, setCurrentChat] = useState(chats[0]);
 
@@ -35,7 +51,6 @@ function ChatWindow() {
       ));
     }
   };
-
   const handleKeyPress = (e) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
@@ -73,7 +88,13 @@ function ChatWindow() {
               onClick={() => setCurrentChat(chat)}
             >
               <div className="chat-info">
-                <div className="chat-name">{chat.name}</div>
+                <div className="chat-name-and-security">
+                  <div className="chat-name">{chat.name}</div>
+                  <div className={`security-indicator ${chat.securityLevel.toLowerCase()}`} title={`${chat.encrypted ? t('encrypted') : t('unencrypted')} - ${t(chat.securityLevel.toLowerCase())}`}>
+                    {chat.encrypted ? '🔒' : '🔓'}
+                  </div>
+                </div>
+                <div className="chat-type">{t(chat.type.toLowerCase())}</div>
                 <div className="chat-preview">{chat.lastMessage}</div>
               </div>
               {chat.unread > 0 && (
@@ -88,6 +109,19 @@ function ChatWindow() {
         <div className="chat-header">
           <h3>{currentChat.name}</h3>
           <div className="chat-type">{t(currentChat.type.toLowerCase())}</div>
+        </div>
+
+        <div className="chat-members-bar">
+          <h4>{t('members')} ({currentChat.memberCount || 3})</h4>
+          <div className="add-member-control">
+            <input
+              type="text"
+              placeholder={t('addMemberPlaceholder') || t('username')}
+              value={memberToAdd}
+              onChange={(e) => setMemberToAdd(e.target.value)}
+            />
+            <button onClick={handleAddMember}>{t('add')}</button>
+          </div>
         </div>
 
         <div className="messages">
@@ -109,10 +143,19 @@ function ChatWindow() {
           <textarea
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
-            onKeyPress={handleKeyPress}
+            onKeyDown={handleKeyPress}
             placeholder={t('typeMessage')}
           />
           <button onClick={handleSend}>{t('send')}</button>
+          <button className="attachment-btn" onClick={() => document.getElementById('file-upload').click()}>
+            📎
+          </button>
+          <input
+            type="file"
+            id="file-upload"
+            style={{ display: 'none' }}
+            onChange={(e) => handleFileUpload(e.target.files[0])}
+          />
         </div>
       </div>
     </div>

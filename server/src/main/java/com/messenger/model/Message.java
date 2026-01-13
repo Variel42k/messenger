@@ -22,6 +22,9 @@ public class Message {
 
     private String content;
 
+    @Column(name = "is_encrypted")
+    private Boolean encrypted = false;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "message_type")
     private MessageType messageType;
@@ -48,6 +51,7 @@ public class Message {
         this.chat = chat;
         this.senderId = senderId;
         this.content = content;
+        this.encrypted = false;
         this.messageType = MessageType.TEXT;
         this.status = MessageStatus.SENT;
         this.createdAt = LocalDateTime.now();
@@ -68,6 +72,9 @@ public class Message {
 
     public String getContent() { return content; }
     public void setContent(String content) { this.content = content; }
+
+    public Boolean isEncrypted() { return encrypted != null ? encrypted : false; }
+    public void setEncrypted(Boolean encrypted) { this.encrypted = encrypted; }
 
     public MessageType getMessageType() { return messageType; }
     public void setMessageType(MessageType messageType) { this.messageType = messageType; }

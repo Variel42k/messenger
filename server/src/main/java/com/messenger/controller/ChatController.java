@@ -43,7 +43,7 @@ public class ChatController {
     @PostMapping
     public ResponseEntity<Chat> createChat(@RequestBody CreateChatRequest request,
                                            @RequestParam Long createdById) {
-        Chat chat = chatService.createChat(request.getName(), request.getType(), request.getEncrypted(), request.getEncryptionKey(), createdById);
+        Chat chat = chatService.createChat(request.getName(), request.getType(), request.getEncrypted(), request.getEncryptionKey(), request.getEncryptionAlgorithm(), request.getSecurityLevel(), createdById);
         if (chat != null) {
             return ResponseEntity.ok(chat);
         } else {
@@ -85,6 +85,78 @@ public class ChatController {
             return ResponseEntity.badRequest().build();
         }
     }
+
+    /**
+     * Удаление участника из чата
+     * @param chatId Идентификатор чата
+     * @param userId Идентификатор пользователя для удаления
+     * @return Ответ с обновленным чатом или ошибкой
+     */
+    @DeleteMapping("/{chatId}/members/{userId}")
+    public ResponseEntity<Chat> removeMemberFromChat(@PathVariable Long chatId,
+                                                     @PathVariable Long userId) {
+        Chat chat = chatService.removeMemberFromChat(chatId, userId);
+        if (chat != null) {
+            return ResponseEntity.ok(chat);
+        } else {
+            return ResponseEntity.badRequest().build();
+        }
+    }
+
+    /**
+     * Обновление типа чата
+     * @param chatId Идентификатор чата
+     * @param newType Новый тип чата
+     * @return Ответ с обновленным чатом или ошибкой
+     */
+    @PutMapping("/{chatId}/type")
+    public ResponseEntity<Chat> updateChatType(@PathVariable Long chatId,
+                                               @RequestParam ChatType newType) {
+        Chat chat = chatService.updateChatType(chatId, newType);
+        if (chat != null) {
+            return ResponseEntity.ok(chat);
+        } else {
+            return ResponseEntity.badRequest().build();
+        }
+    }
+
+    /**
+     * Обновление параметров шифрования чата
+     * @param chatId Идентификатор чата
+     * @param encrypted Флаг включения шифрования
+     * @param encryptionAlgorithm Алгоритм шифрования
+     * @param securityLevel Уровень безопасности
+     * @return Ответ с обновленным чатом или ошибкой
+     */
+    @PutMapping("/{chatId}/encryption")
+    public ResponseEntity<Chat> updateChatEncryption(@PathVariable Long chatId,
+                                                     @RequestParam(required = false) Boolean encrypted,
+                                                     @RequestParam(required = false) String encryptionAlgorithm,
+                                                     @RequestParam(required = false) String securityLevel) {
+        Chat chat = chatService.updateChatEncryption(chatId, encrypted, encryptionAlgorithm, securityLevel);
+        if (chat != null) {
+            return ResponseEntity.ok(chat);
+        } else {
+            return ResponseEntity.badRequest().build();
+        }
+    }
+
+    /**
+     * Назначение модератора чата
+     * @param chatId Идентификатор чата
+     * @param userId Идентификатор пользователя для назначения модератором
+     * @return Ответ с обновленным чатом или ошибкой
+     */
+    @PutMapping("/{chatId}/moderator")
+    public ResponseEntity<Chat> setModerator(@PathVariable Long chatId,
+                                             @RequestParam Long userId) {
+        Chat chat = chatService.setModerator(chatId, userId);
+        if (chat != null) {
+            return ResponseEntity.ok(chat);
+        } else {
+            return ResponseEntity.badRequest().build();
+        }
+    }
 }
 
 /**
@@ -95,6 +167,8 @@ class CreateChatRequest {
     private ChatType type;  // Тип чата
     private Boolean encrypted; // Флаг шифрования чата
     private String encryptionKey; // Ключ шифрования
+    private String encryptionAlgorithm; // Алгоритм шифрования
+    private String securityLevel; // Уровень безопасности
 
     // Геттеры и сеттеры
     public String getName() { return name; }
@@ -108,4 +182,10 @@ class CreateChatRequest {
 
     public String getEncryptionKey() { return encryptionKey; }
     public void setEncryptionKey(String encryptionKey) { this.encryptionKey = encryptionKey; }
+
+    public String getEncryptionAlgorithm() { return encryptionAlgorithm; }
+    public void setEncryptionAlgorithm(String encryptionAlgorithm) { this.encryptionAlgorithm = encryptionAlgorithm; }
+
+    public String getSecurityLevel() { return securityLevel; }
+    public void setSecurityLevel(String securityLevel) { this.securityLevel = securityLevel; }
 }
