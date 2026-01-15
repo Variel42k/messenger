@@ -364,5 +364,11 @@
   "supportedCache": "缓存：Redis 6+ 用于在线状态和发布/订阅功能",
   "supportedStorage": "存储：S3兼容的对象存储用于文件附件",
   "minutes": "分钟",
-  "passwordExpiry": "密码到期时间"
+  "passwordExpiry": "密码到期时间",
+  "uploadingFile": "正在上传文件",
+  "toChat": "到聊天",
+  "fileSent": "文件已发送",
+  "fileUploadedSuccessfully": "文件上传成功",
+  "errorUploadingFile": "上传文件时出错",
+  "downloadFile": "下载文件"
 }

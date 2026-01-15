@@ -40,6 +40,10 @@ spring:
       max-file-size: 100MB
       max-request-size: 100MB
 
+file:
+upload:
+  path: uploads/
+
 jwt:
   secret: ${JWT_SECRET:mySecretKeyForDevelopmentOnly}
   access-token-expiration: ${JWT_ACCESS_TOKEN_EXPIRATION:900000} # 15 minutes in ms

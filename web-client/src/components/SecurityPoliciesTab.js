@@ -261,7 +261,8 @@ function SecurityPoliciesTab({ t }) {
                   </select>
                 </div>
               </div>
-            
+            </div>
+             
             <div className="policy-section">
               <h4>{t('dataClassification') || 'Data Classification'}</h4>
               <div className="form-group">
