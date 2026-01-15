@@ -469,5 +469,11 @@
   "weekly": "Weekly",
   "monthly": "Monthly",
   "immediate": "Immediate",
-  "scheduled": "Scheduled"
+  "scheduled": "Scheduled",
+  "uploadingFile": "Uploading file",
+ "toChat": "to chat",
+  "fileSent": "File sent",
+  "fileUploadedSuccessfully": "File uploaded successfully",
+  "errorUploadingFile": "Error uploading file",
+  "downloadFile": "Download File"
 }

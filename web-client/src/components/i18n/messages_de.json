@@ -499,5 +499,11 @@
   "enableAuditLogging": "Audit-Protokollierung aktivieren",
   "dataClassificationDescription": "Regeln für die Kategorisierung und Verarbeitung verschiedener Arten von Informationen",
   "ldapWindowsUrlDetails": "ldap://domain-controller.unternehmen.com:389 oder ldaps://domain-controller.unternehmen.com:636",
-  "ldapOpenLdapUrlDetails": "ldap://ldap.beispiel.com:389 oder ldaps://ldap.beispiel.com:636"
+  "ldapOpenLdapUrlDetails": "ldap://ldap.beispiel.com:389 oder ldaps://ldap.beispiel.com:636",
+  "uploadingFile": "Lade Datei hoch",
+  "toChat": "in den Chat",
+  "fileSent": "Datei gesendet",
+  "fileUploadedSuccessfully": "Datei erfolgreich hochgeladen",
+  "errorUploadingFile": "Fehler beim Hochladen der Datei",
+  "downloadFile": "Datei herunterladen"
 }

@@ -173,7 +173,7 @@ public class MainController {
             helpStage.setTitle(resourceBundle.getString("help"));
             helpStage.setScene(helpScene);
             helpStage.setResizable(false);
-176 |             helpStage.show();
+            helpStage.show();
         } catch (Exception e) {
             e.printStackTrace();
             Alert alert = new Alert(Alert.AlertType.ERROR);

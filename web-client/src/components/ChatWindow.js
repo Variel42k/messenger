@@ -3,7 +3,17 @@ import { useTranslation } from 'react-i18next';
 import './ChatWindow.css';
 
 function ChatWindow() {
-  const { t } = useTranslation();
+ const { t } = useTranslation();
+  
+  // Функция для форматирования размера файла
+  const formatFileSize = (bytes) => {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  };
+
   const [messages, setMessages] = useState([
     { id: 1, sender: 'System', content: t('helpContent'), isOwn: false }
   ]);
@@ -18,10 +28,95 @@ function ChatWindow() {
     }
   };
   
-  const handleFileUpload = (file) => {
+  const handleFileUpload = async (file) => {
     if (file) {
-      // В реальном приложении здесь будет логика для загрузки файла
-      alert(`${t('uploadingFile')} "${file.name}" ${t('toChat')} "${currentChat.name}"`);
+      try {
+        // Показываем сообщение о начале загрузки
+        alert(`${t('uploadingFile')} "${file.name}" ${t('toChat')} "${currentChat.name}"`);
+        
+        // Сначала загружаем файл на сервер
+        const fileFormData = new FormData();
+        fileFormData.append('file', file);
+        fileFormData.append('chatId', currentChat.id);
+        fileFormData.append('uploadedBy', 1); // В реальном приложении это будет ID текущего пользователя
+        
+        const fileResponse = await fetch('/api/files/upload', {
+          method: 'POST',
+          body: fileFormData,
+        });
+        
+        if (fileResponse.ok) {
+          const fileResult = await fileResponse.json();
+          
+          // После успешной загрузки файла создаем сообщение
+          const messageData = {
+            chatId: currentChat.id,
+            senderId: 1, // ID текущего пользователя
+            content: `${t('fileSent')}: ${file.name}`,
+            messageType: 'FILE'
+          };
+          
+          // Отправляем сообщение о файле
+          const messageResponse = await fetch('/api/messages', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(messageData),
+          });
+          
+          if (messageResponse.ok) {
+            const messageResult = await messageResponse.json();
+            
+            // Создаем сообщение с информацией о файле
+            const fileMessage = {
+              id: messageResult.id || (messages.length + 1),
+              sender: 'You',
+              content: `${t('fileSent')}: ${file.name}`,
+              isOwn: true,
+              timestamp: new Date(),
+              fileType: 'file',
+              fileName: file.name,
+              fileId: fileResult.fileId || fileResult.id, // ID файла, полученный от сервера
+              fileSize: file.size
+            };
+            
+            // Добавляем сообщение с файлом в список сообщений
+            setMessages(prevMessages => [...prevMessages, fileMessage]);
+            
+            // Обновляем последнее сообщение в чате
+            setChats(prevChats => prevChats.map(chat =>
+              chat.id === currentChat.id
+                ? { ...chat, lastMessage: `${t('fileSent')}: ${file.name}`, unread: 0 }
+                : chat
+            ));
+            
+            alert(`${t('fileUploadedSuccessfully')}: ${file.name}`);
+          } else {
+            // Если сообщение не создалось, но файл загрузился, все равно отображаем его
+            const fileMessage = {
+              id: messages.length + 1,
+              sender: 'You',
+              content: `${t('fileSent')}: ${file.name}`,
+              isOwn: true,
+              timestamp: new Date(),
+              fileType: 'file',
+              fileName: file.name,
+              fileId: fileResult.fileId || fileResult.id,
+              fileSize: file.size
+            };
+            
+            setMessages(prevMessages => [...prevMessages, fileMessage]);
+            alert(`${t('fileUploadedSuccessfully')}: ${file.name}`);
+          }
+        } else {
+          const errorText = await fileResponse.text();
+          throw new Error(`File upload failed with status ${fileResponse.status}: ${errorText}`);
+        }
+      } catch (error) {
+        console.error('Error uploading file:', error);
+        alert(`${t('errorUploadingFile')}: ${file.name}\n${error.message}`);
+      }
     }
   };
   const [chats, setChats] = useState([
@@ -131,7 +226,20 @@ function ChatWindow() {
               className={`message ${message.isOwn ? 'own' : ''}`}
             >
               <div className="message-sender">{message.sender}</div>
-              <div className="message-content">{message.content}</div>
+              {message.fileType === 'file' ? (
+                <div className="message-content file-content">
+                  <div className="file-icon">📁</div>
+                  <div className="file-info">
+                    <div className="file-name">{message.fileName}</div>
+                    <div className="file-size">{formatFileSize(message.fileSize)}</div>
+                    <a href={`/api/files/${message.fileId}`} download={message.fileName} className="download-link">
+                      {t('downloadFile')}
+                    </a>
+                  </div>
+                </div>
+              ) : (
+                <div className="message-content">{message.content}</div>
+              )}
               <div className="message-time">
                 {message.timestamp ? message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
               </div>

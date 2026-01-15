@@ -1,8 +1,11 @@
 package com.messenger.service;
 
 import com.messenger.model.Chat;
+import com.messenger.model.File;
 import com.messenger.model.Message;
+import com.messenger.model.MessageFile;
 import com.messenger.model.enums.MessageStatus;
+import com.messenger.repository.MessageFileRepository;
 import com.messenger.repository.MessageRepository;
 import org.springframework.stereotype.Service;
 
@@ -13,11 +16,13 @@ import java.util.Optional;
 public class MessageService {
 
     private final MessageRepository messageRepository;
+    private final MessageFileRepository messageFileRepository;
     private final ChatService chatService;
     private final EncryptionService encryptionService;
 
-    public MessageService(MessageRepository messageRepository, ChatService chatService, EncryptionService encryptionService) {
+    public MessageService(MessageRepository messageRepository, MessageFileRepository messageFileRepository, ChatService chatService, EncryptionService encryptionService) {
         this.messageRepository = messageRepository;
+        this.messageFileRepository = messageFileRepository;
         this.chatService = chatService;
         this.encryptionService = encryptionService;
     }
@@ -56,6 +61,65 @@ public class MessageService {
                 System.err.println("Ошибка при шифровании сообщения: " + e.getMessage());
             }
         }
+        return messageRepository.save(message);
+    }
+
+    public Message saveMessageWithFile(Message message, File file) {
+        // Если чат зашифрован, шифруем содержимое сообщения перед сохранением
+        Chat chat = chatService.getChatById(message.getChat().getId()).orElse(null);
+        if (chat != null && chat.getEncrypted() && chat.getEncryptionKey() != null) {
+            try {
+                String encryptedContent = chatService.encryptMessage(message.getContent(), chat.getEncryptionKey());
+                message.setContent(encryptedContent);
+                message.setEncrypted(true); // Указываем, что содержимое зашифровано
+            } catch (Exception e) {
+                // Логируем ошибку, но не прерываем выполнение
+                System.err.println("Ошибка при шифровании сообщения: " + e.getMessage());
+            }
+        }
+        
+        Message savedMessage = messageRepository.save(message);
+        
+        if (file != null) {
+            // Создаем связь между сообщением и файлом
+            MessageFile messageFile = new MessageFile();
+            messageFile.setMessageId(savedMessage.getId());
+            messageFile.setFileId(file.getId());
+            // Сохраняем связь между сообщением и файлом
+            messageFileRepository.save(messageFile);
+        }
+        
+        return savedMessage;
+    }
+
+    /**
+     * Создает сообщение с использованием ID чата и отправителя
+     */
+    public Message createMessage(Long chatId, Long senderId, String content) {
+        // Получаем чат по ID
+        Chat chat = chatService.getChatById(chatId).orElse(null);
+        if (chat == null) {
+            throw new IllegalArgumentException("Chat not found with id: " + chatId);
+        }
+
+        // Создаем сообщение
+        Message message = new Message();
+        message.setChat(chat);
+        message.setSenderId(senderId);
+        message.setContent(content);
+
+        // Если чат зашифрован, шифруем содержимое сообщения перед сохранением
+        if (chat.getEncrypted() && chat.getEncryptionKey() != null) {
+            try {
+                String encryptedContent = chatService.encryptMessage(message.getContent(), chat.getEncryptionKey());
+                message.setContent(encryptedContent);
+                message.setEncrypted(true); // Указываем, что содержимое зашифровано
+            } catch (Exception e) {
+                // Логируем ошибку, но не прерываем выполнение
+                System.err.println("Ошибка при шифровании сообщения: " + e.getMessage());
+            }
+        }
+
         return messageRepository.save(message);
     }
 
