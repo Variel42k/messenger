@@ -490,5 +490,18 @@
   "weekly": "Еженедельно",
   "monthly": "Ежемесячно",
   "immediate": "Немедленно",
-  "scheduled": "По расписанию"
+  "scheduled": "По расписанию",
+  "uploadingFile": "Загрузка файла",
+  "toChat": "в чат",
+  "fileSent": "Файл отправлен",
+  "fileUploadedSuccessfully": "Файл успешно загружен",
+  "errorUploadingFile": "Ошибка загрузки файла",
+  "downloadFile": "Скачать файл",
+  "searchMessages": "Поиск сообщений...",
+  "searchResults": "Результаты поиска",
+  "thread": "Тред",
+  "replyInThread": "Ответить в треде...",
+  "you": "Вы",
+  "adminAccessDenied": "Административный доступ запрещен.",
+  "addingMember": "Добавление участника"
 }
