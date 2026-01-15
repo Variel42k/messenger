@@ -471,9 +471,16 @@
   "immediate": "Immediate",
   "scheduled": "Scheduled",
   "uploadingFile": "Uploading file",
- "toChat": "to chat",
+  "toChat": "to chat",
   "fileSent": "File sent",
   "fileUploadedSuccessfully": "File uploaded successfully",
   "errorUploadingFile": "Error uploading file",
-  "downloadFile": "Download File"
+  "downloadFile": "Download File",
+  "searchMessages": "Search messages...",
+  "searchResults": "Search Results",
+  "thread": "Thread",
+  "replyInThread": "Reply in thread...",
+  "you": "You",
+  "adminAccessDenied": "Administrative access is denied.",
+  "addingMember": "Adding member"
 }

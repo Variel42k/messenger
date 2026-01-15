@@ -505,5 +505,12 @@
   "fileSent": "Datei gesendet",
   "fileUploadedSuccessfully": "Datei erfolgreich hochgeladen",
   "errorUploadingFile": "Fehler beim Hochladen der Datei",
-  "downloadFile": "Datei herunterladen"
+  "downloadFile": "Datei herunterladen",
+  "searchMessages": "Nachrichten suchen...",
+  "searchResults": "Suchergebnisse",
+  "thread": "Thread",
+  "replyInThread": "Antwort im Thread...",
+  "you": "Sie",
+  "adminAccessDenied": "Administrativer Zugriff verweigert.",
+  "addingMember": "Mitglied hinzufügen"
 }
