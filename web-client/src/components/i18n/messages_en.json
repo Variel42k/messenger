@@ -482,5 +482,11 @@
   "replyInThread": "Reply in thread...",
   "you": "You",
   "adminAccessDenied": "Administrative access is denied.",
-  "addingMember": "Adding member"
+  "addingMember": "Adding member",
+  "security_SECURE": "Secure",
+  "security_LIMITED": "Limited",
+  "security_UNSECURE": "Unsecure",
+  "enhancedPrivacyMode": "Enhanced Privacy Mode",
+  "encryption": "Encryption",
+  "security": "Security"
 }

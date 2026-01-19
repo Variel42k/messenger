@@ -1,9 +1,119 @@
 .chat-container {
   display: flex;
+  flex-direction: column;
   height: 100%;
   background-color: #fff;
   border-radius: 8px;
   box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+  overflow: hidden;
+}
+
+.security-indicator-bar {
+  background-color: #2c3e50;
+  padding: 0.5rem 1rem;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+}
+
+.security-status-indicator {
+  background-color: #3498db;
+  color: white;
+  padding: 0.5rem 1rem;
+  border-radius: 20px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: all 0.3s ease;
+}
+
+.security-status-indicator:hover {
+  transform: scale(1.05);
+}
+
+.security-status-indicator.secure {
+  background-color: #27ae60;
+}
+
+.security-status-indicator.limited {
+  background-color: #f39c12;
+}
+
+.security-status-indicator.unsecure {
+  background-color: #e74c3c;
+}
+
+.enhanced-privacy-badge {
+  font-weight: bold;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+  100% { transform: scale(1); }
+}
+
+.privacy-settings-panel {
+  position: absolute;
+  top: 60px;
+  right: 20px;
+  background-color: white;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  padding: 1rem;
+  z-index: 1000;
+  width: 300px;
+  background-color: #f8f9fa;
+}
+
+.privacy-setting-item {
+  margin-bottom: 1rem;
+}
+
+.privacy-setting-item label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-weight: bold;
+  color: #2c3e50;
+}
+
+.privacy-setting-item select {
+  width: 100%;
+  padding: 0.5rem;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+
+.toggle-button {
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  background-color: #bdc3c7;
+  color: white;
+  transition: background-color 0.3s;
+}
+
+.toggle-button.active {
+  background-color: #27ae60;
+}
+
+.close-privacy-settings {
+  width: 100%;
+  padding: 0.5rem;
+  background-color: #e74c3c;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.chat-layout {
+  display: flex;
+  flex: 1;
   overflow: hidden;
 }
 
@@ -575,4 +685,8 @@
 .thread-replies .message.own {
   background-color: #d1ecf1;
   color: #0c5460;
+}
+
+.security-level-text {
+  font-weight: bold;
 }

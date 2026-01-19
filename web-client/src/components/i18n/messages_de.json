@@ -512,5 +512,11 @@
   "replyInThread": "Antwort im Thread...",
   "you": "Sie",
   "adminAccessDenied": "Administrativer Zugriff verweigert.",
-  "addingMember": "Mitglied hinzufügen"
+  "addingMember": "Mitglied hinzufügen",
+  "security_SECURE": "Sicher",
+  "security_LIMITED": "Begrenzt",
+  "security_UNSECURE": "Unsicher",
+  "enhancedPrivacyMode": "Verbesserter Datenschutzmodus",
+  "encryption": "Verschlüsselung",
+  "security": "Sicherheit"
 }

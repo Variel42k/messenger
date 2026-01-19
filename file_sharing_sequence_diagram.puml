@@ -1,0 +1,51 @@
+@startuml
+title Диаграмма последовательности: Отправка файлов в чате
+
+actor "Пользователь" as User
+participant "Клиентское приложение" as Client
+participant "Сервер приложения" as Server
+database "База данных (PostgreSQL)" as DB
+participant "Файловое хранилище (MiniO)" as FileStorage
+participant "Redis" as Redis
+participant "Другие клиенты" as OtherClients
+
+== Выбор файла для отправки ==
+User -> Client: Выбор файла из файловой системы
+Client -> User: Отображение выбранного файла
+
+== Загрузка файла на сервер ==
+Client -> Server: HTTP POST /api/files/upload (multipart/form-data)
+Server -> FileStorage: Сохранение файла в файловом хранилище
+FileStorage -> Server: Подтверждение сохранения файла
+Server -> DB: Сохранение метаданных файла (имя, размер, владелец и т.д.)
+DB -> Server: Подтверждение сохранения метаданных
+Server -> Client: Ответ с информацией о загруженном файле
+
+== Отправка сообщения с файлом ==
+Client -> Server: HTTP POST /api/messages/with-file (chatId, senderId, content, fileId)
+Server -> Server: Проверка прав доступа к чату
+Server -> Server: Шифрование содержимого сообщения (если чат зашифрован)
+Server -> DB: Сохранение сообщения
+Server -> DB: Создание связи между сообщением и файлом (MessageFile)
+DB -> Server: Подтверждение сохранения
+Server -> Redis: Публикация сообщения с файлом в канале чата
+Redis -> OtherClients: Рассылка сообщения с информацией о файле
+OtherClients -> OtherClients: Расшифровка содержимого (если необходимо)
+OtherClients -> User: Отображение сообщения с ссылкой на файл
+
+== Загрузка файла другим пользователем ==
+User -> Client: Нажатие на ссылку файла в сообщении
+Client -> Server: HTTP GET /api/files/{fileId}
+Server -> DB: Проверка прав доступа к файлу
+DB -> Server: Подтверждение прав доступа
+Server -> FileStorage: Загрузка файла
+FileStorage -> Server: Возврат содержимого файла
+Server -> Client: Возврат содержимого файла
+Client -> User: Сохранение файла в локальной файловой системе
+
+note over Client,Server
+Файлы хранятся в безопасном файловом хранилище (совместимом с S3),
+а в базе данных хранятся только метаданные и связи с сообщениями
+end note
+
+@enduml

@@ -29,6 +29,12 @@ function ChatWindow() {
   const [memberToAdd, setMemberToAdd] = useState('');
   const [selectedMemberRole, setSelectedMemberRole] = useState('MEMBER');
   
+  // Состояния для безопасности и приватности
+  const [securityLevel, setSecurityLevel] = useState('SECURE'); // SECURE, LIMITED, UNSECURE
+  const [privacySettingsVisible, setPrivacySettingsVisible] = useState(false);
+  const [enhancedPrivacyMode, setEnhancedPrivacyMode] = useState(false);
+  const [showSecurityIndicator, setShowSecurityIndicator] = useState(true);
+  
   // Для прокрутки сообщений
   const messagesEndRef = useRef(null);
   const searchInputRef = useRef(null);
@@ -38,9 +44,12 @@ function ChatWindow() {
     if (bytes === 0) return '0 Bytes';
     const k = 1024;
     const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    const i = Math.floor(log(bytes) / log(k));
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
+
+  // Логарифм для форматирования размера
+  const log = Math.log;
 
   // Прокрутка к последнему сообщению
   const scrollToBottom = () => {
@@ -69,6 +78,9 @@ function ChatWindow() {
       { id: 4, username: 'Charlie', role: 'MEMBER', online: false }
     ];
     setChatMembers(mockMembers);
+    
+    // Устанавливаем уровень безопасности текущего чата
+    setSecurityLevel(currentChat.securityLevel);
   }, [currentChat]);
 
   // Прокрутка к последнему сообщению при его изменении
@@ -305,230 +317,336 @@ function ChatWindow() {
     setInputValue('');
   };
 
+  // Переключение режима повышенной конфиденциальности
+  const toggleEnhancedPrivacyMode = () => {
+    setEnhancedPrivacyMode(!enhancedPrivacyMode);
+    // При включении режима повышенной конфиденциальности меняем уровень безопасности
+    if (!enhancedPrivacyMode) {
+      setSecurityLevel('SECURE');
+      // Также можно обновить текущий чат
+      setChats(prevChats => prevChats.map(chat => 
+        chat.id === currentChat.id ? { ...chat, securityLevel: 'SECURE' } : chat
+      ));
+    }
+  };
+
+  // Обработка жеста для активации режима повышенной конфиденциальности
+  const handleSwipeGesture = (direction) => {
+    // Активация режима повышенной конфиденциальности свайпом вниз
+    if (direction === 'down' && !enhancedPrivacyMode) {
+      toggleEnhancedPrivacyMode();
+      setTimeout(() => {
+        // Автоматическое отключение через 30 секунд
+        setEnhancedPrivacyMode(false);
+      }, 30000);
+    }
+  };
+
+  // Обработка касания для показа настроек приватности
+  const handlePrivacyTap = () => {
+    setPrivacySettingsVisible(true);
+    setTimeout(() => setPrivacySettingsVisible(false), 3000); // Автоматическое скрытие через 3 секунды
+  };
+
   return (
     <div className="chat-container">
-      <div className="sidebar">
-        <div className="sidebar-header">
-          <h3>{t('chats')}</h3>
-          <button className="new-chat-btn" onClick={handleCreateChat}>+</button>
-        </div>
-        <div className="search-container">
-          <input
-            type="text"
-            placeholder={t('searchMessages')}
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
-          />
-          <button onClick={handleSearch}>🔍</button>
-          {isSearching && (
-            <button onClick={clearSearch} className="clear-search-btn">✕</button>
+      {/* Верхний индикатор уровня защиты */}
+      <div className="security-indicator-bar">
+        <div 
+          className={`security-status-indicator ${securityLevel.toLowerCase()}`}
+          onClick={handlePrivacyTap}
+          onTouchStart={(e) => {
+            const touchStartY = e.touches[0].clientY;
+            let touchMoveY = touchStartY;
+            
+            const handleTouchMove = (moveEvent) => {
+              touchMoveY = moveEvent.touches[0].clientY;
+            };
+            
+            const handleTouchEnd = () => {
+              const swipeDistance = touchMoveY - touchStartY;
+              
+              if (swipeDistance > 50) { // Свайп вниз
+                handleSwipeGesture('down');
+              }
+              
+              document.removeEventListener('touchmove', handleTouchMove);
+              document.removeEventListener('touchend', handleTouchEnd);
+            };
+            
+            document.addEventListener('touchmove', handleTouchMove);
+            document.addEventListener('touchend', handleTouchEnd);
+          }}
+        >
+          {enhancedPrivacyMode ? (
+            <span className="enhanced-privacy-badge">🛡️ {t('enhancedPrivacyMode')}</span>
+          ) : (
+            <>
+              <span className="security-level-text">
+                {securityLevel === 'SECURE' ? '🔒' : securityLevel === 'LIMITED' ? '🟡' : '⚠️'} 
+                {' '}{t(`security_${securityLevel.toLowerCase()}`)}
+              </span>
+            </>
           )}
         </div>
-        <ul>
-          {chats.map(chat => (
-            <li
-              key={chat.id}
-              className={currentChat.id === chat.id ? 'active' : ''}
-              onClick={() => {
-                setCurrentChat(chat);
-                clearSearch(); // Очистка поиска при смене чата
-              }}
-            >
-              <div className="chat-info">
-                <div className="chat-name-and-security">
-                  <div className="chat-name">{chat.name}</div>
-                  <div className={`security-indicator ${chat.securityLevel.toLowerCase()}`} title={`${chat.encrypted ? t('encrypted') : t('unencrypted')} - ${t(chat.securityLevel.toLowerCase())}`}>
-                    {chat.encrypted ? '🔒' : '🔓'}
-                  </div>
-                </div>
-                <div className="chat-type">{t(chat.type.toLowerCase())}</div>
-                <div className="chat-preview">{chat.lastMessage}</div>
-              </div>
-              {chat.unread > 0 && (
-                <div className="unread-count">{chat.unread}</div>
-              )}
-            </li>
-          ))}
-        </ul>
       </div>
 
-      <div className="chat-area">
-        <div className="chat-header">
-          <h3>{currentChat.name}</h3>
-          <div className="chat-type">{t(currentChat.type.toLowerCase())}</div>
+      {/* Панель настроек приватности (появляется при касании индикатора) */}
+      {privacySettingsVisible && (
+        <div className="privacy-settings-panel">
+          <div className="privacy-setting-item">
+            <label>{t('encryption')}</label>
+            <select 
+              value={securityLevel} 
+              onChange={(e) => setSecurityLevel(e.target.value)}
+            >
+              <option value="UNSECURE">{t('security_unsecure')}</option>
+              <option value="LIMITED">{t('security_limited')}</option>
+              <option value="SECURE">{t('security_secure')}</option>
+            </select>
+          </div>
+          <div className="privacy-setting-item">
+            <label>{t('enhancedPrivacyMode')}</label>
+            <button 
+              className={`toggle-button ${enhancedPrivacyMode ? 'active' : ''}`}
+              onClick={toggleEnhancedPrivacyMode}
+            >
+              {enhancedPrivacyMode ? t('enabled') : t('disabled')}
+            </button>
+          </div>
+          <button 
+            className="close-privacy-settings"
+            onClick={() => setPrivacySettingsVisible(false)}
+          >
+            {t('close')}
+          </button>
         </div>
+      )}
 
-        {/* Панель участников и управления правами */}
-        <div className="chat-members-bar">
-          <div className="members-section">
-            <h4>{t('members')} ({chatMembers.length})</h4>
-            <div className="members-list">
-              {chatMembers.map(member => (
-                <div key={member.id} className="member-item">
-                  <span className={`member-name ${member.online ? 'online' : 'offline'} ${member.own ? 'own' : ''}`}>
-                    {member.username} {member.own && `(${t('you')})`}
-                  </span>
-                  {member.own || currentChat.createdById === member.id ? (
-                    <span className={`role-badge ${member.role.toLowerCase()}`}>{t(member.role.toLowerCase())}</span>
-                  ) : (
-                    <select 
-                      value={member.role} 
-                      onChange={(e) => updateMemberRole(member.id, e.target.value)}
-                      disabled={chatMembers.find(m => m.own)?.role !== 'ADMIN'}
-                    >
-                      <option value="MEMBER">{t('member')}</option>
-                      <option value="MODERATOR">{t('moderator')}</option>
-                      <option value="ADMIN">{t('admin')}</option>
-                    </select>
-                  )}
-                </div>
-              ))}
-            </div>
+      <div className="chat-layout">
+        <div className="sidebar">
+          <div className="sidebar-header">
+            <h3>{t('chats')}</h3>
+            <button className="new-chat-btn" onClick={handleCreateChat}>+</button>
           </div>
-          
-          <div className="add-member-section">
-            <div className="add-member-control">
-              <input
-                type="text"
-                placeholder={t('addMemberPlaceholder') || t('username')}
-                value={memberToAdd}
-                onChange={(e) => setMemberToAdd(e.target.value)}
-              />
-              <select 
-                value={selectedMemberRole} 
-                onChange={(e) => setSelectedMemberRole(e.target.value)}
+          <div className="search-container">
+            <input
+              type="text"
+              placeholder={t('searchMessages')}
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
+            />
+            <button onClick={handleSearch}>🔍</button>
+            {isSearching && (
+              <button onClick={clearSearch} className="clear-search-btn">✕</button>
+            )}
+          </div>
+          <ul>
+            {chats.map(chat => (
+              <li
+                key={chat.id}
+                className={currentChat.id === chat.id ? 'active' : ''}
+                onClick={() => {
+                  setCurrentChat(chat);
+                  clearSearch(); // Очистка поиска при смене чата
+                }}
               >
-                <option value="MEMBER">{t('member')}</option>
-                <option value="MODERATOR">{t('moderator')}</option>
-              </select>
-              <button onClick={handleAddMember}>{t('add')}</button>
-            </div>
-          </div>
-        </div>
-
-        {/* Отображение результатов поиска или обычных сообщений */}
-        {isSearching && searchResults.length > 0 && (
-          <div className="search-results-panel">
-            <h4>{t('searchResults')} ({searchResults.length})</h4>
-            <div className="search-results-messages">
-              {searchResults.map(message => (
-                <div key={message.id} className="search-result-item">
-                  <div className="message-sender">{message.sender}</div>
-                  <div className="message-content">{message.content}</div>
-                  <div className="message-time">
-                    {message.timestamp ? message.timestamp.toLocaleString() : ''}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Отображение треда если активен */}
-        {currentThread && (
-          <div className="thread-view">
-            <div className="thread-header">
-              <h4>{t('thread')} - {currentThread.parentMessage.sender}: {currentThread.parentMessage.content.substring(0, 30)}{currentThread.parentMessage.content.length > 30 ? '...' : ''}</h4>
-              <button className="close-thread-btn" onClick={() => setCurrentThread(null)}>✕</button>
-            </div>
-            <div className="thread-parent-message">
-              <div className="message {currentThread.parentMessage.isOwn ? 'own' : ''}">
-                <div className="message-sender">{currentThread.parentMessage.sender}</div>
-                <div className="message-content">{currentThread.parentMessage.content}</div>
-                <div className="message-time">
-                  {currentThread.parentMessage.timestamp ? currentThread.parentMessage.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
-                </div>
-              </div>
-            </div>
-            <div className="thread-replies">
-              {currentThread.replies.map(reply => (
-                <div key={reply.id} className={`message ${reply.isOwn ? 'own' : ''}`}>
-                  <div className="message-sender">{reply.sender}</div>
-                  <div className="message-content">{reply.content}</div>
-                  <div className="message-time">
-                    {reply.timestamp ? reply.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Обычное отображение сообщений */}
-        {!isSearching && !currentThread && (
-          <div className="messages">
-            {messages.map(message => (
-              <div
-                key={message.id}
-                className={`message ${message.isOwn ? 'own' : ''}`}
-              >
-                <div className="message-sender">{message.sender}</div>
-                {message.fileType === 'file' ? (
-                  <div className="message-content file-content">
-                    <div className="file-icon">📁</div>
-                    <div className="file-info">
-                      <div className="file-name">{message.fileName}</div>
-                      <div className="file-size">{formatFileSize(message.fileSize)}</div>
-                      <a href={`/api/files/${message.fileId}`} download={message.fileName} className="download-link">
-                        {t('downloadFile')}
-                      </a>
+                <div className="chat-info">
+                  <div className="chat-name-and-security">
+                    <div className="chat-name">{chat.name}</div>
+                    <div className={`security-indicator ${chat.securityLevel.toLowerCase()}`} title={`${chat.encrypted ? t('encrypted') : t('unencrypted')} - ${t(chat.securityLevel.toLowerCase())}`}>
+                      {chat.encrypted ? '🔒' : '🔓'}
                     </div>
                   </div>
-                ) : (
-                  <div className="message-content">{message.content}</div>
-                )}
-                <div className="message-time">
-                  {message.timestamp ? message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
+                  <div className="chat-type">{t(chat.type.toLowerCase())}</div>
+                  <div className="chat-preview">{chat.lastMessage}</div>
                 </div>
-                <div className="message-actions">
-                  <button className="reply-btn" onClick={() => createThread(message)}>
-                    {t('reply')}
-                  </button>
+                {chat.unread > 0 && (
+                  <div className="unread-count">{chat.unread}</div>
+                )}
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        <div className="chat-area">
+          <div className="chat-header">
+            <h3>{currentChat.name}</h3>
+            <div className="chat-type">{t(currentChat.type.toLowerCase())}</div>
+          </div>
+
+          {/* Панель участников и управления правами */}
+          <div className="chat-members-bar">
+            <div className="members-section">
+              <h4>{t('members')} ({chatMembers.length})</h4>
+              <div className="members-list">
+                {chatMembers.map(member => (
+                  <div key={member.id} className="member-item">
+                    <span className={`member-name ${member.online ? 'online' : 'offline'} ${member.own ? 'own' : ''}`}>
+                      {member.username} {member.own && `(${t('you')})`}
+                    </span>
+                    {member.own || currentChat.createdById === member.id ? (
+                      <span className={`role-badge ${member.role.toLowerCase()}`}>{t(member.role.toLowerCase())}</span>
+                    ) : (
+                      <select 
+                        value={member.role} 
+                        onChange={(e) => updateMemberRole(member.id, e.target.value)}
+                        disabled={chatMembers.find(m => m.own)?.role !== 'ADMIN'}
+                      >
+                        <option value="MEMBER">{t('member')}</option>
+                        <option value="MODERATOR">{t('moderator')}</option>
+                        <option value="ADMIN">{t('admin')}</option>
+                      </select>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+            
+            <div className="add-member-section">
+              <div className="add-member-control">
+                <input
+                  type="text"
+                  placeholder={t('addMemberPlaceholder') || t('username')}
+                  value={memberToAdd}
+                  onChange={(e) => setMemberToAdd(e.target.value)}
+                />
+                <select 
+                  value={selectedMemberRole} 
+                  onChange={(e) => setSelectedMemberRole(e.target.value)}
+                >
+                  <option value="MEMBER">{t('member')}</option>
+                  <option value="MODERATOR">{t('moderator')}</option>
+                </select>
+                <button onClick={handleAddMember}>{t('add')}</button>
+              </div>
+            </div>
+          </div>
+
+          {/* Отображение результатов поиска или обычных сообщений */}
+          {isSearching && searchResults.length > 0 && (
+            <div className="search-results-panel">
+              <h4>{t('searchResults')} ({searchResults.length})</h4>
+              <div className="search-results-messages">
+                {searchResults.map(message => (
+                  <div key={message.id} className="search-result-item">
+                    <div className="message-sender">{message.sender}</div>
+                    <div className="message-content">{message.content}</div>
+                    <div className="message-time">
+                      {message.timestamp ? message.timestamp.toLocaleString() : ''}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Отображение треда если активен */}
+          {currentThread && (
+            <div className="thread-view">
+              <div className="thread-header">
+                <h4>{t('thread')} - {currentThread.parentMessage.sender}: {currentThread.parentMessage.content.substring(0, 30)}{currentThread.parentMessage.content.length > 30 ? '...' : ''}</h4>
+                <button className="close-thread-btn" onClick={() => setCurrentThread(null)}>✕</button>
+              </div>
+              <div className="thread-parent-message">
+                <div className="message {currentThread.parentMessage.isOwn ? 'own' : ''}">
+                  <div className="message-sender">{currentThread.parentMessage.sender}</div>
+                  <div className="message-content">{currentThread.parentMessage.content}</div>
+                  <div className="message-time">
+                    {currentThread.parentMessage.timestamp ? currentThread.parentMessage.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
+                  </div>
                 </div>
               </div>
-            ))}
-            <div ref={messagesEndRef} />
-          </div>
-        )}
+              <div className="thread-replies">
+                {currentThread.replies.map(reply => (
+                  <div key={reply.id} className={`message ${reply.isOwn ? 'own' : ''}`}>
+                    <div className="message-sender">{reply.sender}</div>
+                    <div className="message-content">{reply.content}</div>
+                    <div className="message-time">
+                      {reply.timestamp ? reply.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
-        {/* Поле ввода сообщения */}
-        {!currentThread ? (
-          <div className="message-input">
-            <textarea
-              value={inputValue}
-              onChange={(e) => setInputValue(e.target.value)}
-              onKeyDown={handleKeyPress}
-              placeholder={t('typeMessage')}
-            />
-            <button onClick={handleSend}>{t('send')}</button>
-            <button className="attachment-btn" onClick={() => document.getElementById('file-upload').click()}>
-              📎
-            </button>
-            <input
-              type="file"
-              id="file-upload"
-              style={{ display: 'none' }}
-              onChange={(e) => handleFileUpload(e.target.files[0])}
-            />
-          </div>
-        ) : (
-          <div className="message-input">
-            <textarea
-              value={inputValue}
-              onChange={(e) => setInputValue(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                  e.preventDefault();
-                  replyInThread(currentThread.id, inputValue);
-                }
-              }}
-              placeholder={t('replyInThread')}
-            />
-            <button onClick={() => replyInThread(currentThread.id, inputValue)}>{t('reply')}</button>
-            <button className="cancel-thread-btn" onClick={() => setCurrentThread(null)}>{t('cancel')}</button>
-          </div>
-        )}
+          {/* Обычное отображение сообщений */}
+          {!isSearching && !currentThread && (
+            <div className="messages">
+              {messages.map(message => (
+                <div
+                  key={message.id}
+                  className={`message ${message.isOwn ? 'own' : ''}`}
+                >
+                  <div className="message-sender">{message.sender}</div>
+                  {message.fileType === 'file' ? (
+                    <div className="message-content file-content">
+                      <div className="file-icon">📁</div>
+                      <div className="file-info">
+                        <div className="file-name">{message.fileName}</div>
+                        <div className="file-size">{formatFileSize(message.fileSize)}</div>
+                        <a href={`/api/files/${message.fileId}`} download={message.fileName} className="download-link">
+                          {t('downloadFile')}
+                        </a>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="message-content">{message.content}</div>
+                  )}
+                  <div className="message-time">
+                    {message.timestamp ? message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
+                  </div>
+                  <div className="message-actions">
+                    <button className="reply-btn" onClick={() => createThread(message)}>
+                      {t('reply')}
+                    </button>
+                  </div>
+                </div>
+              ))}
+              <div ref={messagesEndRef} />
+            </div>
+          )}
+
+          {/* Поле ввода сообщения */}
+          {!currentThread ? (
+            <div className="message-input">
+              <textarea
+                value={inputValue}
+                onChange={(e) => setInputValue(e.target.value)}
+                onKeyDown={handleKeyPress}
+                placeholder={t('typeMessage')}
+              />
+              <button onClick={handleSend}>{t('send')}</button>
+              <button className="attachment-btn" onClick={() => document.getElementById('file-upload').click()}>
+                📎
+              </button>
+              <input
+                type="file"
+                id="file-upload"
+                style={{ display: 'none' }}
+                onChange={(e) => handleFileUpload(e.target.files[0])}
+              />
+            </div>
+          ) : (
+            <div className="message-input">
+              <textarea
+                value={inputValue}
+                onChange={(e) => setInputValue(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    replyInThread(currentThread.id, inputValue);
+                  }
+                }}
+                placeholder={t('replyInThread')}
+              />
+              <button onClick={() => replyInThread(currentThread.id, inputValue)}>{t('reply')}</button>
+              <button className="cancel-thread-btn" onClick={() => setCurrentThread(null)}>{t('cancel')}</button>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
