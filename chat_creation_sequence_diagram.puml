@@ -1,0 +1,68 @@
+@startuml
+title Диаграмма последовательности: Создание чата и управление участниками
+
+actor "Администратор чата" as Admin
+participant "Клиентское приложение" as Client
+participant "Сервер приложения" as Server
+database "База данных (PostgreSQL)" as DB
+participant "Redis" as Redis
+participant "Новые участники чата" as NewMembers
+
+== Создание нового чата ==
+Admin -> Client: Ввод параметров нового чата (название, тип, шифрование)
+Client -> Server: HTTP POST /api/chats (name, type, encrypted, encryptionKey, algorithm, securityLevel, createdById)
+Server -> Server: Проверка прав создания чата
+Server -> DB: Создание записи чата
+DB -> Server: Подтверждение создания чата
+Server -> DB: Создание связи между создателем и чатом (UserChat с ролью OWNER)
+DB -> Server: Подтверждение создания связи
+Server -> Client: Возврат информации о созданном чате
+Client -> Admin: Отображение созданного чата
+
+== Добавление участников в чат ==
+Admin -> Client: Ввод имени участника для добавления
+Client -> Server: HTTP POST /api/chats/{chatId}/members (userId, role)
+Server -> Server: Проверка прав администратора на добавление участников
+Server -> DB: Проверка существования пользователя
+DB -> Server: Подтверждение существования пользователя
+Server -> DB: Создание связи между пользователем и чатом (UserChat с указанной ролью)
+DB -> Server: Подтверждение создания связи
+Server -> Redis: Уведомление нового участника о добавлении в чат
+Redis -> NewMembers: Рассылка уведомления о добавлении в чат
+NewMembers -> NewMembers: Обновление списка чатов
+NewMembers -> User: Отображение нового чата в списке
+Server -> Client: Подтверждение добавления участника
+Client -> Admin: Отображение обновленного списка участников
+
+== Настройка параметров шифрования чата ==
+Admin -> Client: Изменение параметров шифрования чата
+Client -> Server: HTTP PUT /api/chats/{chatId}/encryption (encrypted, algorithm, securityLevel)
+Server -> Server: Проверка прав администратора
+Server -> DB: Обновление параметров шифрования чата
+DB -> Server: Подтверждение обновления
+Server -> Redis: Рассылка обновления параметров шифрования участникам чата
+Redis -> Client: Уведомление об изменении параметров шифрования
+Client -> Admin: Отображение обновленных параметров
+Redis -> OtherClients: Уведомление об изменении параметров шифрования
+OtherClients -> OtherClients: Обновление параметров шифрования
+
+== Назначение модератора чата ==
+Admin -> Client: Выбор пользователя для назначения модератором
+Client -> Server: HTTP PUT /api/chats/{chatId}/moderator (userId)
+Server -> Server: Проверка прав владельца чата
+Server -> DB: Обновление роли пользователя в чате на MODERATOR
+DB -> Server: Подтверждение обновления
+Server -> Client: Подтверждение назначения модератора
+Client -> Admin: Отображение обновленных ролей участников
+
+note over Admin,Server
+Чат может быть зашифрован с использованием сквозного шифрования,
+при котором только участники чата могут расшифровать сообщения
+end note
+
+note over Server,DB
+Связь между пользователями и чатами хранится в таблице UserChat,
+которая определяет права доступа и роли участников
+end note
+
+@enduml

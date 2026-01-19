@@ -503,5 +503,11 @@
   "replyInThread": "Ответить в треде...",
   "you": "Вы",
   "adminAccessDenied": "Административный доступ запрещен.",
-  "addingMember": "Добавление участника"
+  "addingMember": "Добавление участника",
+  "security_SECURE": "Безопасный",
+  "security_LIMITED": "Ограниченный",
+  "security_UNSECURE": "Небезопасный",
+  "enhancedPrivacyMode": "Режим усиленной конфиденциальности",
+  "encryption": "Шифрование",
+  "security": "Безопасность"
 }

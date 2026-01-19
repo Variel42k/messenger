@@ -512,5 +512,11 @@
   "replyInThread": "在话题中回复...",
   "you": "您",
   "adminAccessDenied": "拒绝管理员访问。",
-  "addingMember": "添加成员"
+  "addingMember": "添加成员",
+  "security_SECURE": "安全",
+  "security_LIMITED": "有限",
+  "security_UNSECURE": "不安全",
+  "enhancedPrivacyMode": "增强隐私模式",
+  "encryption": "加密",
+  "security": "安全"
 }
