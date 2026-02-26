@@ -1,49 +1,71 @@
 package com.messenger.controller;
 
+import com.messenger.dto.CreateChatRequest;
 import com.messenger.model.Chat;
+import com.messenger.model.User;
 import com.messenger.model.enums.ChatType;
 import com.messenger.model.enums.ChatRole;
 import com.messenger.service.ChatService;
+import com.messenger.service.UserService;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.Optional;
 
 /**
- * Контроллер для управления чатами
- * Обрабатывает получение, создание чатов и добавление участников
+ * Controller for chat management
  */
 @RestController
 @RequestMapping("/api/chats")
 public class ChatController {
 
     private final ChatService chatService;
+    private final UserService userService;
 
-    public ChatController(ChatService chatService) {
+    public ChatController(ChatService chatService, UserService userService) {
         this.chatService = chatService;
+        this.userService = userService;
     }
 
     /**
-     * Получение списка чатов для указанного пользователя
-     * @param userId Идентификатор пользователя
-     * @return Список чатов пользователя
+     * Helper to get current user's ID from JWT
+     */
+    private Long getCurrentUserId(UserDetails userDetails) {
+        User user = userService.findByUsernameOrEmail(userDetails.getUsername());
+        return user != null ? user.getId() : null;
+    }
+
+    /**
+     * Get chats for the authenticated user
      */
     @GetMapping
-    public List<Chat> getUserChats(@RequestParam Long userId) {
-        return chatService.getUserChats(userId);
+    public ResponseEntity<List<Chat>> getUserChats(@AuthenticationPrincipal UserDetails userDetails,
+            @RequestParam(required = false) Long userId) {
+        // Use userId from JWT if not provided (backward compatibility)
+        Long resolvedUserId = userId != null ? userId : getCurrentUserId(userDetails);
+        if (resolvedUserId == null) {
+            return ResponseEntity.badRequest().build();
+        }
+        return ResponseEntity.ok(chatService.getUserChats(resolvedUserId));
     }
 
     /**
-     * Создание нового чата
-     * @param request Запрос с параметрами создания чата
-     * @param createdById Идентификатор пользователя, создающего чат
-     * @return Ответ с созданным чатом или ошибкой
+     * Create a new chat
      */
     @PostMapping
     public ResponseEntity<Chat> createChat(@RequestBody CreateChatRequest request,
-                                           @RequestParam Long createdById) {
-        Chat chat = chatService.createChat(request.getName(), request.getType(), request.getEncrypted(), request.getEncryptionKey(), request.getEncryptionAlgorithm(), request.getSecurityLevel(), createdById);
+            @AuthenticationPrincipal UserDetails userDetails,
+            @RequestParam(required = false) Long createdById) {
+        // Use createdById from JWT if not provided (backward compatibility)
+        Long resolvedCreatedById = createdById != null ? createdById : getCurrentUserId(userDetails);
+        if (resolvedCreatedById == null) {
+            return ResponseEntity.badRequest().build();
+        }
+        Chat chat = chatService.createChat(request.getName(), request.getType(), request.getEncrypted(),
+                request.getEncryptionKey(), request.getEncryptionAlgorithm(), request.getSecurityLevel(),
+                resolvedCreatedById);
         if (chat != null) {
             return ResponseEntity.ok(chat);
         } else {
@@ -52,31 +74,22 @@ public class ChatController {
     }
 
     /**
-     * Получение чата по идентификатору
-     * @param chatId Идентификатор чата
-     * @return Ответ с чатом или ошибкой 404
+     * Get chat by ID
      */
     @GetMapping("/{chatId}")
     public ResponseEntity<Chat> getChatById(@PathVariable Long chatId) {
-        Optional<Chat> chat = chatService.getChatById(chatId);
-        if (chat.isPresent()) {
-            return ResponseEntity.ok(chat.get());
-        } else {
-            return ResponseEntity.notFound().build();
-        }
+        return chatService.getChatById(chatId)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
     }
 
     /**
-     * Добавление участника в чат
-     * @param chatId Идентификатор чата
-     * @param userId Идентификатор пользователя для добавления
-     * @param role Роль пользователя в чате
-     * @return Ответ с обновленным чатом или ошибкой
+     * Add member to chat
      */
     @PostMapping("/{chatId}/members")
     public ResponseEntity<Chat> addMemberToChat(@PathVariable Long chatId,
-                                                @RequestParam Long userId,
-                                                @RequestParam String role) {
+            @RequestParam Long userId,
+            @RequestParam String role) {
         Chat chat = chatService.addMemberToChat(chatId, userId,
                 ChatRole.valueOf(role.toUpperCase()));
         if (chat != null) {
@@ -87,14 +100,11 @@ public class ChatController {
     }
 
     /**
-     * Удаление участника из чата
-     * @param chatId Идентификатор чата
-     * @param userId Идентификатор пользователя для удаления
-     * @return Ответ с обновленным чатом или ошибкой
+     * Remove member from chat
      */
     @DeleteMapping("/{chatId}/members/{userId}")
     public ResponseEntity<Chat> removeMemberFromChat(@PathVariable Long chatId,
-                                                     @PathVariable Long userId) {
+            @PathVariable Long userId) {
         Chat chat = chatService.removeMemberFromChat(chatId, userId);
         if (chat != null) {
             return ResponseEntity.ok(chat);
@@ -104,14 +114,11 @@ public class ChatController {
     }
 
     /**
-     * Обновление типа чата
-     * @param chatId Идентификатор чата
-     * @param newType Новый тип чата
-     * @return Ответ с обновленным чатом или ошибкой
+     * Update chat type
      */
     @PutMapping("/{chatId}/type")
     public ResponseEntity<Chat> updateChatType(@PathVariable Long chatId,
-                                               @RequestParam ChatType newType) {
+            @RequestParam ChatType newType) {
         Chat chat = chatService.updateChatType(chatId, newType);
         if (chat != null) {
             return ResponseEntity.ok(chat);
@@ -121,18 +128,13 @@ public class ChatController {
     }
 
     /**
-     * Обновление параметров шифрования чата
-     * @param chatId Идентификатор чата
-     * @param encrypted Флаг включения шифрования
-     * @param encryptionAlgorithm Алгоритм шифрования
-     * @param securityLevel Уровень безопасности
-     * @return Ответ с обновленным чатом или ошибкой
+     * Update chat encryption settings
      */
     @PutMapping("/{chatId}/encryption")
     public ResponseEntity<Chat> updateChatEncryption(@PathVariable Long chatId,
-                                                     @RequestParam(required = false) Boolean encrypted,
-                                                     @RequestParam(required = false) String encryptionAlgorithm,
-                                                     @RequestParam(required = false) String securityLevel) {
+            @RequestParam(required = false) Boolean encrypted,
+            @RequestParam(required = false) String encryptionAlgorithm,
+            @RequestParam(required = false) String securityLevel) {
         Chat chat = chatService.updateChatEncryption(chatId, encrypted, encryptionAlgorithm, securityLevel);
         if (chat != null) {
             return ResponseEntity.ok(chat);
@@ -142,14 +144,11 @@ public class ChatController {
     }
 
     /**
-     * Назначение модератора чата
-     * @param chatId Идентификатор чата
-     * @param userId Идентификатор пользователя для назначения модератором
-     * @return Ответ с обновленным чатом или ошибкой
+     * Set moderator
      */
     @PutMapping("/{chatId}/moderator")
     public ResponseEntity<Chat> setModerator(@PathVariable Long chatId,
-                                             @RequestParam Long userId) {
+            @RequestParam Long userId) {
         Chat chat = chatService.setModerator(chatId, userId);
         if (chat != null) {
             return ResponseEntity.ok(chat);
@@ -157,35 +156,4 @@ public class ChatController {
             return ResponseEntity.badRequest().build();
         }
     }
-}
-
-/**
- * DTO для запроса создания чата
- */
-class CreateChatRequest {
-    private String name;    // Название чата
-    private ChatType type;  // Тип чата
-    private Boolean encrypted; // Флаг шифрования чата
-    private String encryptionKey; // Ключ шифрования
-    private String encryptionAlgorithm; // Алгоритм шифрования
-    private String securityLevel; // Уровень безопасности
-
-    // Геттеры и сеттеры
-    public String getName() { return name; }
-    public void setName(String name) { this.name = name; }
-
-    public ChatType getType() { return type; }
-    public void setType(ChatType type) { this.type = type; }
-
-    public Boolean getEncrypted() { return encrypted != null ? encrypted : false; }
-    public void setEncrypted(Boolean encrypted) { this.encrypted = encrypted; }
-
-    public String getEncryptionKey() { return encryptionKey; }
-    public void setEncryptionKey(String encryptionKey) { this.encryptionKey = encryptionKey; }
-
-    public String getEncryptionAlgorithm() { return encryptionAlgorithm; }
-    public void setEncryptionAlgorithm(String encryptionAlgorithm) { this.encryptionAlgorithm = encryptionAlgorithm; }
-
-    public String getSecurityLevel() { return securityLevel; }
-    public void setSecurityLevel(String securityLevel) { this.securityLevel = securityLevel; }
 }

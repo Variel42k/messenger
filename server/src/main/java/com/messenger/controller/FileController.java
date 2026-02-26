@@ -2,7 +2,9 @@ package com.messenger.controller;
 
 import com.messenger.model.File;
 import com.messenger.service.FileService;
-import org.springframework.beans.factory.annotation.Autowired;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;
 import org.springframework.http.HttpHeaders;
@@ -11,7 +13,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 
@@ -19,52 +20,65 @@ import java.nio.file.Paths;
 @RequestMapping("/api/files")
 public class FileController {
 
-    @Autowired
-    private FileService fileService;
+    private static final Logger logger = LoggerFactory.getLogger(FileController.class);
+
+    private final FileService fileService;
+    private final Path uploadDir;
+
+    public FileController(FileService fileService,
+            @Value("${file.upload.path:uploads/}") String uploadPath) {
+        this.fileService = fileService;
+        this.uploadDir = Paths.get(uploadPath).toAbsolutePath().normalize();
+    }
 
     @PostMapping("/upload")
     public ResponseEntity<?> uploadFile(@RequestParam("file") MultipartFile file,
-                                       @RequestParam(value = "chatId", required = false) Long chatId,
-                                       @RequestParam(value = "uploadedBy", required = false) Long uploadedBy) {
+            @RequestParam(value = "chatId", required = false) Long chatId,
+            @RequestParam(value = "uploadedBy", required = false) Long uploadedBy) {
         try {
-            // Сохраняем файл
             File savedFile = fileService.saveFile(file, uploadedBy);
-            
-            // Возвращаем информацию о файле
-            return ResponseEntity.ok().body(new UploadResponse(savedFile.getId(), savedFile.getOriginalName(), savedFile.getSize()));
+            return ResponseEntity.ok()
+                    .body(new UploadResponse(savedFile.getId(), savedFile.getOriginalName(), savedFile.getSize()));
         } catch (Exception e) {
+            logger.error("Error uploading file: {}", e.getMessage());
             return ResponseEntity.badRequest().body("Error uploading file: " + e.getMessage());
         }
     }
 
     @GetMapping("/{fileId}")
     public ResponseEntity<Resource> downloadFile(@PathVariable Long fileId) {
-        // Находим файл в базе данных
-        com.messenger.model.File file = fileService.findById(fileId);
-        
+        File file = fileService.findById(fileId);
+
         if (file == null) {
             return ResponseEntity.notFound().build();
         }
 
         try {
-            // Создаем путь к файлу
-            Path filePath = Paths.get("uploads").resolve(file.getStoredName()).normalize();
+            // Path Traversal protection: resolve and verify the path stays within uploadDir
+            Path filePath = uploadDir.resolve(file.getStoredName()).normalize();
+            if (!filePath.startsWith(uploadDir)) {
+                logger.warn("Path traversal attempt detected for file: {}", file.getStoredName());
+                return ResponseEntity.badRequest().build();
+            }
+
             Resource resource = new UrlResource(filePath.toUri());
 
             if (resource.exists()) {
                 return ResponseEntity.ok()
                         .contentType(MediaType.parseMediaType(file.getContentType()))
-                        .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + file.getOriginalName() + "\"")
+                        .header(HttpHeaders.CONTENT_DISPOSITION,
+                                "attachment; filename=\"" + file.getOriginalName() + "\"")
                         .body(resource);
             } else {
                 return ResponseEntity.notFound().build();
             }
         } catch (Exception e) {
+            logger.error("Error downloading file {}: {}", fileId, e.getMessage());
             return ResponseEntity.internalServerError().build();
         }
     }
 
-    // Вспомогательный класс для ответа
+    // Upload response DTO
     public static class UploadResponse {
         private Long fileId;
         private String fileName;
@@ -76,9 +90,16 @@ public class FileController {
             this.fileSize = fileSize;
         }
 
-        // Getters
-        public Long getFileId() { return fileId; }
-        public String getFileName() { return fileName; }
-        public Long getFileSize() { return fileSize; }
+        public Long getFileId() {
+            return fileId;
+        }
+
+        public String getFileName() {
+            return fileName;
+        }
+
+        public Long getFileSize() {
+            return fileSize;
+        }
     }
 }
