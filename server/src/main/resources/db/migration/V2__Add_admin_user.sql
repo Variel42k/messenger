@@ -4,7 +4,7 @@
 
 -- Создание администратора с хешированным паролем (bcrypt хеш для 'admin123')
 INSERT INTO users (username, email, password_hash, first_name, last_name, role, status, created_at, updated_at) 
-VALUES ('admin', 'admin@messenger.local', '$2a$10$9mxTxAkC4yYwUW0a7M6vkuOaEwDh6qdm6v6xU8o0O54.WyU4z7vUW', 'Admin', 'User', 'ADMIN', 'ACTIVE', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+VALUES ('admin', 'admin@messenger.local', '$2a$10$4NB8Nyqtpsqn1U/MQXAXNeoem.RgGsUAI5gwlmFyQiPQ3KQlmtEkW', 'Admin', 'User', 'ADMIN', 'ACTIVE', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
 ON CONFLICT (username) DO UPDATE SET password_hash = EXCLUDED.password_hash;
 
 -- Добавляем настройки для администратора, если они еще не существуют
