@@ -1,9 +1,16 @@
 package com.messenger.controller;
 
+import com.messenger.dto.AuthResponse;
+import com.messenger.dto.RefreshTokenRequest;
+import com.messenger.dto.UserLoginRequest;
+import com.messenger.dto.UserRegistrationRequest;
 import com.messenger.model.User;
 import com.messenger.model.enums.UserStatus;
 import com.messenger.security.JwtTokenProvider;
 import com.messenger.service.UserService;
+import jakarta.validation.Valid;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -17,12 +24,13 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * Контроллер аутентификации для обработки регистрации, входа и обновления
- * токенов
+ * Authentication controller for registration, login, and token refresh
  */
 @RestController
 @RequestMapping("/api/auth")
 public class AuthController {
+
+    private static final Logger logger = LoggerFactory.getLogger(AuthController.class);
 
     private final UserService userService;
     private final PasswordEncoder passwordEncoder;
@@ -38,24 +46,21 @@ public class AuthController {
     }
 
     /**
-     * Регистрация нового пользователя
-     * 
-     * @param request Запрос с данными пользователя
-     * @return Ответ с результатом регистрации
+     * Register a new user
      */
     @PostMapping("/register")
-    public ResponseEntity<Map<String, String>> register(@RequestBody UserRegistrationRequest request) {
+    public ResponseEntity<Map<String, String>> register(@Valid @RequestBody UserRegistrationRequest request) {
         User existingUser = userService.findByUsernameOrEmail(request.getUsername());
         if (existingUser != null) {
             return ResponseEntity.status(HttpStatus.CONFLICT)
                     .body(Map.of("error", "User already exists"));
         }
 
-        // Создание нового пользователя с зашифрованным паролем
+        // Create new user with encoded password
         User user = new User(request.getUsername(), request.getEmail(),
                 passwordEncoder.encode(request.getPassword()));
-        user.setStatus(UserStatus.ACTIVE); // Устанавливаем статус активным по умолчанию
-        User savedUser = userService.save(user);
+        user.setStatus(UserStatus.ACTIVE);
+        userService.save(user);
 
         Map<String, String> response = new HashMap<>();
         response.put("message", "User registered successfully");
@@ -63,45 +68,35 @@ public class AuthController {
     }
 
     /**
-     * Аутентификация пользователя и выдача JWT токенов
-     * 
-     * @param request Запрос с учетными данными пользователя
-     * @return Ответ с JWT токенами
+     * Authenticate user and issue JWT tokens
      */
     @PostMapping("/login")
-    public ResponseEntity<AuthResponse> login(@RequestBody UserLoginRequest request) {
+    public ResponseEntity<AuthResponse> login(@Valid @RequestBody UserLoginRequest request) {
         try {
-            // Аутентификация пользователя
             Authentication authentication = authenticationManager
                     .authenticate(
                             new UsernamePasswordAuthenticationToken(request.getUsername(), request.getPassword()));
 
-            // Генерация токенов доступа и обновления
             String accessToken = jwtTokenProvider.generateAccessToken(authentication);
             String refreshToken = jwtTokenProvider.generateRefreshToken(authentication);
 
             return ResponseEntity.ok(new AuthResponse(accessToken, refreshToken, "Bearer"));
         } catch (Exception e) {
-            System.err.println("Login failed for user '" + request.getUsername() + "': " + e.getClass().getName()
-                    + " - " + e.getMessage());
+            logger.warn("Login failed for user '{}': {} - {}", request.getUsername(),
+                    e.getClass().getSimpleName(), e.getMessage());
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
     }
 
     /**
-     * Обновление JWT токена с использованием токена обновления
-     * 
-     * @param request Запрос с токеном обновления
-     * @return Ответ с новыми JWT токенами
+     * Refresh JWT token using refresh token
      */
     @PostMapping("/refresh")
-    public ResponseEntity<AuthResponse> refresh(@RequestBody RefreshTokenRequest request) {
+    public ResponseEntity<AuthResponse> refresh(@Valid @RequestBody RefreshTokenRequest request) {
         if (jwtTokenProvider.validateToken(request.getRefreshToken())) {
-            // Извлечение имени пользователя из токена обновления
             String username = jwtTokenProvider.getUsernameFromToken(request.getRefreshToken());
             try {
                 UserDetails userDetails = userService.loadUserByUsername(username);
-                // Создание аутентификации и генерация новых токенов
                 var auth = new UsernamePasswordAuthenticationToken(
                         userDetails.getUsername(), null, userDetails.getAuthorities());
                 String newAccessToken = jwtTokenProvider.generateAccessToken(auth);
@@ -109,125 +104,10 @@ public class AuthController {
 
                 return ResponseEntity.ok(new AuthResponse(newAccessToken, newRefreshToken, "Bearer"));
             } catch (Exception e) {
+                logger.warn("Token refresh failed for user '{}': {}", username, e.getMessage());
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
             }
         }
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
-    }
-}
-
-// Классы DTO для запросов и ответов
-/**
- * DTO для запроса регистрации пользователя
- */
-class UserRegistrationRequest {
-    private String username;
-    private String email;
-    private String password;
-
-    // Геттеры и сеттеры
-    public String getUsername() {
-        return username;
-    }
-
-    public void setUsername(String username) {
-        this.username = username;
-    }
-
-    public String getEmail() {
-        return email;
-    }
-
-    public void setEmail(String email) {
-        this.email = email;
-    }
-
-    public String getPassword() {
-        return password;
-    }
-
-    public void setPassword(String password) {
-        this.password = password;
-    }
-}
-
-/**
- * DTO для запроса входа пользователя
- */
-class UserLoginRequest {
-    private String username;
-    private String password;
-
-    // Геттеры и сеттеры
-    public String getUsername() {
-        return username;
-    }
-
-    public void setUsername(String username) {
-        this.username = username;
-    }
-
-    public String getPassword() {
-        return password;
-    }
-
-    public void setPassword(String password) {
-        this.password = password;
-    }
-}
-
-/**
- * DTO для запроса обновления токена
- */
-class RefreshTokenRequest {
-    private String refreshToken;
-
-    // Геттеры и сеттеры
-    public String getRefreshToken() {
-        return refreshToken;
-    }
-
-    public void setRefreshToken(String refreshToken) {
-        this.refreshToken = refreshToken;
-    }
-}
-
-/**
- * DTO для ответа с аутентификационными токенами
- */
-class AuthResponse {
-    private String accessToken;
-    private String refreshToken;
-    private String tokenType;
-
-    public AuthResponse(String accessToken, String refreshToken, String tokenType) {
-        this.accessToken = accessToken;
-        this.refreshToken = refreshToken;
-        this.tokenType = tokenType;
-    }
-
-    // Геттеры и сеттеры
-    public String getAccessToken() {
-        return accessToken;
-    }
-
-    public void setAccessToken(String accessToken) {
-        this.accessToken = accessToken;
-    }
-
-    public String getRefreshToken() {
-        return refreshToken;
-    }
-
-    public void setRefreshToken(String refreshToken) {
-        this.refreshToken = refreshToken;
-    }
-
-    public String getTokenType() {
-        return tokenType;
-    }
-
-    public void setTokenType(String tokenType) {
-        this.tokenType = tokenType;
     }
 }
