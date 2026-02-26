@@ -3,6 +3,7 @@ package com.messenger.config;
 import com.messenger.security.JwtAuthenticationFilter;
 import com.messenger.security.JwtTokenProvider;
 import com.messenger.service.UserService;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -19,6 +20,7 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
+import java.util.Arrays;
 import java.util.List;
 
 /**
@@ -32,6 +34,9 @@ public class SecurityConfig {
     private final UserService userDetailsService;
     private final JwtTokenProvider jwtTokenProvider;
 
+    @Value("${cors.allowed-origins:http://localhost:3000,http://localhost:3001,http://localhost:8080}")
+    private String allowedOrigins;
+
     public SecurityConfig(UserService userDetailsService, JwtTokenProvider jwtTokenProvider) {
         this.userDetailsService = userDetailsService;
         this.jwtTokenProvider = jwtTokenProvider;
@@ -39,37 +44,42 @@ public class SecurityConfig {
 
     /**
      * Настройка цепочки фильтров безопасности
-     * @param http Конфигурация HTTP безопасности
+     * 
+     * @param http                    Конфигурация HTTP безопасности
      * @param jwtAuthenticationFilter JWT фильтр аутентификации
      * @return Цепочка фильтров безопасности
      */
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http, JwtAuthenticationFilter jwtAuthenticationFilter) throws Exception {
+    public SecurityFilterChain securityFilterChain(HttpSecurity http, JwtAuthenticationFilter jwtAuthenticationFilter)
+            throws Exception {
         http
-            // Отключение CSRF для API
-            .csrf(csrf -> csrf.disable())
-            // Настройка CORS
-            .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-            // Настройка сессии как STATELESS
-            .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-            // Настройка разрешений доступа к различным маршрутам
-            .authorizeHttpRequests(authorize -> authorize
-                // Разрешить доступ без аутентификации к маршрутам аутентификации, WebSocket и эндпоинтам состояния
-                .requestMatchers("/api/auth/**", "/ws/**", "/actuator/health", "/actuator/info").permitAll()
-                // Требовать роль ADMIN для администраторских маршрутов
-                .requestMatchers("/api/admin/**").hasRole("ADMIN")
-                // Для всех остальных маршрутов требуется аутентификация
-                .anyRequest().authenticated()
-            )
-            // Добавление JWT фильтра аутентификации
-            .authenticationProvider(daoAuthenticationProvider())
-            .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+                // Отключение CSRF для API
+                .csrf(csrf -> csrf.disable())
+                // Настройка CORS
+                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+                // Настройка сессии как STATELESS
+                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                // Настройка разрешений доступа к различным маршрутам
+                .authorizeHttpRequests(authorize -> authorize
+                        // Разрешить доступ без аутентификации к маршрутам аутентификации, WebSocket и
+                        // эндпоинтам состояния
+                        .requestMatchers("/api/auth/**", "/ws/**", "/actuator/health", "/actuator/info",
+                                "/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**")
+                        .permitAll()
+                        // Требовать роль ADMIN для администраторских маршрутов
+                        .requestMatchers("/api/admin/**").hasRole("ADMIN")
+                        // Для всех остальных маршрутов требуется аутентификация
+                        .anyRequest().authenticated())
+                // Добавление JWT фильтра аутентификации
+                .authenticationProvider(daoAuthenticationProvider())
+                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }
 
     /**
      * Провайдер аутентификации
+     * 
      * @return DaoAuthenticationProvider
      */
     @Bean
@@ -82,6 +92,7 @@ public class SecurityConfig {
 
     /**
      * Менеджер аутентификации
+     * 
      * @param config Конфигурация аутентификации
      * @return AuthenticationManager
      */
@@ -92,6 +103,7 @@ public class SecurityConfig {
 
     /**
      * Кодировщик паролей
+     * 
      * @return BCrypt кодировщик паролей
      */
     @Bean
@@ -101,13 +113,14 @@ public class SecurityConfig {
 
     /**
      * Источник конфигурации CORS
+     * 
      * @return Источник конфигурации CORS
      */
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        // Разрешить все источники (в продакшене следует ограничить)
-        configuration.setAllowedOriginPatterns(List.of("*"));
+        // Use origins from application.yml
+        configuration.setAllowedOriginPatterns(Arrays.asList(allowedOrigins.split(",")));
         // Разрешить основные HTTP методы
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         // Разрешить все заголовки
