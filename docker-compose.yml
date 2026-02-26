@@ -3,9 +3,9 @@ services:
     image: postgres:15
     container_name: messenger-postgres
     environment:
-      POSTGRES_DB: messenger
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: password
+      POSTGRES_DB: ${POSTGRES_DB:-messenger}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-password}
     ports:
       - "5432:5432"
     volumes:
@@ -31,8 +31,8 @@ services:
     image: minio/minio:latest
     container_name: messenger-minio
     environment:
-      MINIO_ROOT_USER: minioadmin
-      MINIO_ROOT_PASSWORD: minioadmin
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
     ports:
       - "9000:9000"
       - "9001:9001"
@@ -58,9 +58,9 @@ services:
       DB_HOST: postgres
       REDIS_HOST: redis
       S3_ENDPOINT: http://minio:9000
-      S3_ACCESS_KEY: minioadmin
-      S3_SECRET_KEY: minioadmin
-      S3_BUCKET_NAME: messenger-files
+      S3_ACCESS_KEY: ${S3_ACCESS_KEY:-minioadmin}
+      S3_SECRET_KEY: ${S3_SECRET_KEY:-minioadmin}
+      S3_BUCKET_NAME: ${S3_BUCKET_NAME:-messenger-files}
       JWT_SECRET: ${JWT_SECRET:-mySecretKeyForDevelopmentOnlyMustBe256Bits!!}
     networks:
       - messenger-network
@@ -80,19 +80,6 @@ services:
     restart: unless-stopped
     environment:
       - NODE_ENV=development
-
-  # client:
-  #   build:
-  #     context: ./client
-  #     dockerfile: Dockerfile
-  #   container_name: messenger-client
-  #   depends_on:
-  #     - server
-  #   networks:
-  #     - messenger-network
-  #   restart: unless-stopped
-  #   environment:
-  #     - SERVER_URL=http://server:8080
 
 networks:
   messenger-network:
