@@ -7,6 +7,7 @@ import com.messenger.model.enums.ChatRole;
 import com.messenger.repository.ChatRepository;
 import com.messenger.repository.UserChatRepository;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Optional;
@@ -19,12 +20,14 @@ public class ChatService {
     private final UserChatRepository userChatRepository;
     private final EncryptionService encryptionService;
 
-    public ChatService(ChatRepository chatRepository, UserChatRepository userChatRepository, EncryptionService encryptionService) {
+    public ChatService(ChatRepository chatRepository, UserChatRepository userChatRepository,
+            EncryptionService encryptionService) {
         this.chatRepository = chatRepository;
         this.userChatRepository = userChatRepository;
         this.encryptionService = encryptionService;
     }
 
+    @Transactional(readOnly = true)
     public List<Chat> getUserChats(Long userId) {
         List<UserChat> userChats = userChatRepository.findByUserId(userId);
         return userChats.stream()
@@ -33,7 +36,9 @@ public class ChatService {
                 .toList();
     }
 
-    public Chat createChat(String name, ChatType type, Boolean encrypted, String encryptionKey, String encryptionAlgorithm, String securityLevel, Long createdById) {
+    @Transactional
+    public Chat createChat(String name, ChatType type, Boolean encrypted, String encryptionKey,
+            String encryptionAlgorithm, String securityLevel, Long createdById) {
         Chat chat = new Chat(name, type, createdById);
         chat.setEncrypted(encrypted != null ? encrypted : false);
         if (encrypted != null && encrypted) {
@@ -71,12 +76,14 @@ public class ChatService {
         return createChat(name, type, false, null, createdById);
     }
 
+    @Transactional
     public Chat addMemberToChat(Long chatId, Long userId, ChatRole role) {
         UserChat userChat = new UserChat(chatId, userId, role);
         userChatRepository.save(userChat);
         return chatRepository.findById(chatId).orElse(null);
     }
 
+    @Transactional
     public Chat removeMemberFromChat(Long chatId, Long userId) {
         Optional<UserChat> userChatOpt = userChatRepository.findByChatIdAndUserId(chatId, userId);
         if (userChatOpt.isPresent()) {
@@ -114,6 +121,7 @@ public class ChatService {
         return null;
     }
 
+    @Transactional
     public Chat setModerator(Long chatId, Long userId) {
         Optional<Chat> chatOpt = chatRepository.findById(chatId);
         if (chatOpt.isPresent()) {
