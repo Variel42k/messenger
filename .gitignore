@@ -1,0 +1,35 @@
+# Build output
+**/target/
+*.class
+*.jar
+*.war
+*.ear
+
+# Maven
+dependency-reduced-pom.xml
+*.log
+
+# IDE
+.idea/
+.vscode/
+*.iml
+*.ipr
+*.iws
+.project
+.classpath
+.settings/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Environment
+.env
+
+# Node
+**/node_modules/
+**/dist/
+**/build/
