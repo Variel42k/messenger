@@ -17,7 +17,8 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * Контроллер аутентификации для обработки регистрации, входа и обновления токенов
+ * Контроллер аутентификации для обработки регистрации, входа и обновления
+ * токенов
  */
 @RestController
 @RequestMapping("/api/auth")
@@ -29,7 +30,7 @@ public class AuthController {
     private final AuthenticationManager authenticationManager;
 
     public AuthController(UserService userService, PasswordEncoder passwordEncoder,
-                         JwtTokenProvider jwtTokenProvider, AuthenticationManager authenticationManager) {
+            JwtTokenProvider jwtTokenProvider, AuthenticationManager authenticationManager) {
         this.userService = userService;
         this.passwordEncoder = passwordEncoder;
         this.jwtTokenProvider = jwtTokenProvider;
@@ -38,6 +39,7 @@ public class AuthController {
 
     /**
      * Регистрация нового пользователя
+     * 
      * @param request Запрос с данными пользователя
      * @return Ответ с результатом регистрации
      */
@@ -54,7 +56,7 @@ public class AuthController {
                 passwordEncoder.encode(request.getPassword()));
         user.setStatus(UserStatus.ACTIVE); // Устанавливаем статус активным по умолчанию
         User savedUser = userService.save(user);
-        
+
         Map<String, String> response = new HashMap<>();
         response.put("message", "User registered successfully");
         return ResponseEntity.ok(response);
@@ -62,6 +64,7 @@ public class AuthController {
 
     /**
      * Аутентификация пользователя и выдача JWT токенов
+     * 
      * @param request Запрос с учетными данными пользователя
      * @return Ответ с JWT токенами
      */
@@ -70,20 +73,24 @@ public class AuthController {
         try {
             // Аутентификация пользователя
             Authentication authentication = authenticationManager
-                    .authenticate(new UsernamePasswordAuthenticationToken(request.getUsername(), request.getPassword()));
-            
+                    .authenticate(
+                            new UsernamePasswordAuthenticationToken(request.getUsername(), request.getPassword()));
+
             // Генерация токенов доступа и обновления
             String accessToken = jwtTokenProvider.generateAccessToken(authentication);
             String refreshToken = jwtTokenProvider.generateRefreshToken(authentication);
-            
+
             return ResponseEntity.ok(new AuthResponse(accessToken, refreshToken, "Bearer"));
         } catch (Exception e) {
+            System.err.println("Login failed for user '" + request.getUsername() + "': " + e.getClass().getName()
+                    + " - " + e.getMessage());
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
     }
 
     /**
      * Обновление JWT токена с использованием токена обновления
+     * 
      * @param request Запрос с токеном обновления
      * @return Ответ с новыми JWT токенами
      */
@@ -99,7 +106,7 @@ public class AuthController {
                         userDetails.getUsername(), null, userDetails.getAuthorities());
                 String newAccessToken = jwtTokenProvider.generateAccessToken(auth);
                 String newRefreshToken = jwtTokenProvider.generateRefreshToken(auth);
-                
+
                 return ResponseEntity.ok(new AuthResponse(newAccessToken, newRefreshToken, "Bearer"));
             } catch (Exception e) {
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
@@ -119,14 +126,29 @@ class UserRegistrationRequest {
     private String password;
 
     // Геттеры и сеттеры
-    public String getUsername() { return username; }
-    public void setUsername(String username) { this.username = username; }
+    public String getUsername() {
+        return username;
+    }
 
-    public String getEmail() { return email; }
-    public void setEmail(String email) { this.email = email; }
+    public void setUsername(String username) {
+        this.username = username;
+    }
 
-    public String getPassword() { return password; }
-    public void setPassword(String password) { this.password = password; }
+    public String getEmail() {
+        return email;
+    }
+
+    public void setEmail(String email) {
+        this.email = email;
+    }
+
+    public String getPassword() {
+        return password;
+    }
+
+    public void setPassword(String password) {
+        this.password = password;
+    }
 }
 
 /**
@@ -137,11 +159,21 @@ class UserLoginRequest {
     private String password;
 
     // Геттеры и сеттеры
-    public String getUsername() { return username; }
-    public void setUsername(String username) { this.username = username; }
+    public String getUsername() {
+        return username;
+    }
 
-    public String getPassword() { return password; }
-    public void setPassword(String password) { this.password = password; }
+    public void setUsername(String username) {
+        this.username = username;
+    }
+
+    public String getPassword() {
+        return password;
+    }
+
+    public void setPassword(String password) {
+        this.password = password;
+    }
 }
 
 /**
@@ -151,8 +183,13 @@ class RefreshTokenRequest {
     private String refreshToken;
 
     // Геттеры и сеттеры
-    public String getRefreshToken() { return refreshToken; }
-    public void setRefreshToken(String refreshToken) { this.refreshToken = refreshToken; }
+    public String getRefreshToken() {
+        return refreshToken;
+    }
+
+    public void setRefreshToken(String refreshToken) {
+        this.refreshToken = refreshToken;
+    }
 }
 
 /**
@@ -170,12 +207,27 @@ class AuthResponse {
     }
 
     // Геттеры и сеттеры
-    public String getAccessToken() { return accessToken; }
-    public void setAccessToken(String accessToken) { this.accessToken = accessToken; }
+    public String getAccessToken() {
+        return accessToken;
+    }
 
-    public String getRefreshToken() { return refreshToken; }
-    public void setRefreshToken(String refreshToken) { this.refreshToken = refreshToken; }
+    public void setAccessToken(String accessToken) {
+        this.accessToken = accessToken;
+    }
 
-    public String getTokenType() { return tokenType; }
-    public void setTokenType(String tokenType) { this.tokenType = tokenType; }
+    public String getRefreshToken() {
+        return refreshToken;
+    }
+
+    public void setRefreshToken(String refreshToken) {
+        this.refreshToken = refreshToken;
+    }
+
+    public String getTokenType() {
+        return tokenType;
+    }
+
+    public void setTokenType(String tokenType) {
+        this.tokenType = tokenType;
+    }
 }

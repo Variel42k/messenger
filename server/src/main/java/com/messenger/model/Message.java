@@ -1,5 +1,7 @@
 package com.messenger.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.messenger.model.enums.MessageStatus;
 import com.messenger.model.enums.MessageType;
 import jakarta.persistence.*;
@@ -8,11 +10,13 @@ import java.util.Set;
 
 @Entity
 @Table(name = "messages")
+@JsonIgnoreProperties({ "hibernateLazyInitializer", "handler" })
 public class Message {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @JsonIgnore
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "chat_id", nullable = false)
     private Chat chat;
@@ -41,11 +45,13 @@ public class Message {
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
+    @JsonIgnore
     @OneToMany(mappedBy = "message", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private Set<MessageFile> messageFiles;
 
     // Конструкторы
-    public Message() {}
+    public Message() {
+    }
 
     public Message(Chat chat, Long senderId, String content) {
         this.chat = chat;
@@ -59,38 +65,95 @@ public class Message {
     }
 
     // Геттеры и сеттеры
-    public Long getId() { return id; }
-    public void setId(Long id) { this.id = id; }
+    public Long getId() {
+        return id;
+    }
 
-    public Chat getChat() { return chat; }
-    public void setChat(Chat chat) { this.chat = chat; }
+    public void setId(Long id) {
+        this.id = id;
+    }
 
-    public Long getChatId() { return chat != null ? chat.getId() : null; }
+    public Chat getChat() {
+        return chat;
+    }
 
-    public Long getSenderId() { return senderId; }
-    public void setSenderId(Long senderId) { this.senderId = senderId; }
+    public void setChat(Chat chat) {
+        this.chat = chat;
+    }
 
-    public String getContent() { return content; }
-    public void setContent(String content) { this.content = content; }
+    public Long getChatId() {
+        return chat != null ? chat.getId() : null;
+    }
 
-    public Boolean isEncrypted() { return encrypted != null ? encrypted : false; }
-    public void setEncrypted(Boolean encrypted) { this.encrypted = encrypted; }
+    public Long getSenderId() {
+        return senderId;
+    }
 
-    public MessageType getMessageType() { return messageType; }
-    public void setMessageType(MessageType messageType) { this.messageType = messageType; }
+    public void setSenderId(Long senderId) {
+        this.senderId = senderId;
+    }
 
-    public Long getReplyToMessageId() { return replyToMessageId; }
-    public void setReplyToMessageId(Long replyToMessageId) { this.replyToMessageId = replyToMessageId; }
+    public String getContent() {
+        return content;
+    }
 
-    public MessageStatus getStatus() { return status; }
-    public void setStatus(MessageStatus status) { this.status = status; }
+    public void setContent(String content) {
+        this.content = content;
+    }
 
-    public LocalDateTime getCreatedAt() { return createdAt; }
-    public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
+    public Boolean isEncrypted() {
+        return encrypted != null ? encrypted : false;
+    }
 
-    public LocalDateTime getUpdatedAt() { return updatedAt; }
-    public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
+    public void setEncrypted(Boolean encrypted) {
+        this.encrypted = encrypted;
+    }
 
-    public Set<MessageFile> getMessageFiles() { return messageFiles; }
-    public void setMessageFiles(Set<MessageFile> messageFiles) { this.messageFiles = messageFiles; }
+    public MessageType getMessageType() {
+        return messageType;
+    }
+
+    public void setMessageType(MessageType messageType) {
+        this.messageType = messageType;
+    }
+
+    public Long getReplyToMessageId() {
+        return replyToMessageId;
+    }
+
+    public void setReplyToMessageId(Long replyToMessageId) {
+        this.replyToMessageId = replyToMessageId;
+    }
+
+    public MessageStatus getStatus() {
+        return status;
+    }
+
+    public void setStatus(MessageStatus status) {
+        this.status = status;
+    }
+
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
+    }
+
+    public void setCreatedAt(LocalDateTime createdAt) {
+        this.createdAt = createdAt;
+    }
+
+    public LocalDateTime getUpdatedAt() {
+        return updatedAt;
+    }
+
+    public void setUpdatedAt(LocalDateTime updatedAt) {
+        this.updatedAt = updatedAt;
+    }
+
+    public Set<MessageFile> getMessageFiles() {
+        return messageFiles;
+    }
+
+    public void setMessageFiles(Set<MessageFile> messageFiles) {
+        this.messageFiles = messageFiles;
+    }
 }

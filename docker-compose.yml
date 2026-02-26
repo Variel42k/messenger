@@ -61,7 +61,7 @@ services:
       S3_ACCESS_KEY: minioadmin
       S3_SECRET_KEY: minioadmin
       S3_BUCKET_NAME: messenger-files
-      JWT_SECRET: ${JWT_SECRET:-mySecretKeyForDevelopmentOnly}
+      JWT_SECRET: ${JWT_SECRET:-mySecretKeyForDevelopmentOnlyMustBe256Bits!!}
     networks:
       - messenger-network
     restart: unless-stopped
