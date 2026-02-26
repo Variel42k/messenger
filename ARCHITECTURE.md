@@ -3,105 +3,124 @@
 ## Общая архитектура
 
 ```
-┌─────────────────────────────────┐
-│                        Клиентская часть                         │
-│  ┌─────────────────┐  ┌─────────────────┐ ┌─────────────────┐  │
-│  │   JavaFX UI     │  │   WebSocket     │  │   HTTP Client   │  │
-│  │   (FXML/CSS)    │  │   Client        │  │   (REST API)    │  │
-│  └─────────────────┘  └─────────────────┘  └─────────────────┘  │
-└─────────────────────────────────────────────────────────┘
-                                    │
-                                    ▼
-┌─────────────────────────────────────────────────────────┐
-│                        Серверная часть                          │
-│  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐  │
-│  │   WebSocket     │  │   REST API      │  │   Security      │  │
-│  │   (STOMP)       │  │   (Spring MVC)  │  │   (JWT)         │  │
-│  └─────────────────┘  └─────────────────┘  └─────────────────┘  │
-│  ┌─────────────────┐  ┌─────────────────┐  ┌─────────┐  │
-│  │   Service       │  │   Repository    │  │   Config        │  │
-│  │   (Business)    │  │   (JPA)         │  │   (Spring)      │  │
-│  └─────────────────┘  └─────────────────┘  └─────────────────┘  │
-└─────────────────────────────────────────────────────────┘
-                                    │
-                    ┌───────────────┼───────────────┐
-                    ▼               ▼
-        ┌─────────────────┐ ┌─────────────────┐ ┌─────────┐
-        │   PostgreSQL    │ │     Redis       │ │    RustFS       │
-        │   (Messages,    │ │   (Online      │ │   (File         │
-        │   Users, Chats) │ │   Status, Pub/  │ │   Storage)      │
-        └─────────────────┘ │   Sub)          │ └─────────────────┘
-                            └─────────────────┘
+┌──────────────────────────────────────────────────────────────┐
+│                     Клиентская часть                         │
+│  ┌─────────────────┐  ┌─────────────────┐                   │
+│  │   Web Client    │  │   JavaFX Client │                   │
+│  │   (React)       │  │   (Desktop)     │                   │
+│  └────────┬────────┘  └────────┬────────┘                   │
+│           │  REST + WebSocket  │                             │
+└───────────┼────────────────────┼─────────────────────────────┘
+            │                    │
+            ▼                    ▼
+┌──────────────────────────────────────────────────────────────┐
+│                     Серверная часть (Spring Boot 3.x)        │
+│  ┌─────────────────┐  ┌─────────────────┐  ┌──────────────┐ │
+│  │   WebSocket     │  │   REST API      │  │  Security    │ │
+│  │   (STOMP)       │  │   (Spring MVC)  │  │  (JWT)       │ │
+│  └─────────────────┘  └─────────────────┘  └──────────────┘ │
+│  ┌─────────────────┐  ┌─────────────────┐  ┌──────────────┐ │
+│  │   DTO Layer     │  │   Service       │  │  Repository  │ │
+│  │   (@Valid)       │  │   (@Transactional)│ │  (JPA)       │ │
+│  └─────────────────┘  └─────────────────┘  └──────────────┘ │
+│  ┌─────────────────┐  ┌─────────────────┐                   │
+│  │   GlobalExc.    │  │   Config        │                   │
+│  │   Handler       │  │   (Security,    │                   │
+│  │                 │  │    CORS, WS)    │                   │
+│  └─────────────────┘  └─────────────────┘                   │
+└──────────────────────────────────────────────────────────────┘
+                            │
+            ┌───────────────┼───────────────┐
+            ▼               ▼               ▼
+┌─────────────────┐ ┌─────────────────┐ ┌─────────────────┐
+│   PostgreSQL 15 │ │   Redis 7       │ │   MinIO         │
+│   (Users, Chats,│ │   (Online       │ │   (S3 File      │
+│   Messages)     │ │   Status,       │ │   Storage)      │
+│                 │ │   Pub/Sub)      │ │                 │
+└─────────────────┘ └─────────────────┘ └─────────────────┘
 ```
 
 ## Компоненты системы
 
-### 1. Клиентская часть (JavaFX)
-- **UI слой**: FXML для разметки интерфейса, CSS для стилизации
-- **Контроллеры**: Обработка событий пользовательского интерфейса
-- **WebSocket клиент**: Реализация реального времени общения
-- **HTTP клиент**: Взаимодействие с REST API
+### 1. Веб-клиент (React)
+- SPA на React с Webpack
+- WebSocket-клиент для сообщений реального времени
+- HTTP-клиент для REST API
+- Мультиязычность (EN, RU, ES)
+- Контейнеризация через Nginx (порт 3001)
 
-### 2. Серверная часть (Spring Boot)
-- **Web слой**:
-  - REST контроллеры для API
+### 2. Десктоп-клиент (JavaFX)
+- UI: FXML для разметки, CSS для стилизации
+- Контроллеры: обработка событий интерфейса
+- WebSocket-клиент: STOMP-протокол
+- HTTP-клиент: REST API
+
+### 3. Серверная часть (Spring Boot 3.x)
+
+- **Web-слой**:
+  - REST-контроллеры (Spring MVC)
   - WebSocket/STOMP для реального времени
-  - Обработка CORS и безопасности
+  - DTO с Jakarta Validation (`@Valid`, `@NotBlank`, `@Size`, `@Email`)
+  - GlobalExceptionHandler для унифицированных ответов
 
 - **Слой безопасности**:
- - JWT токены (доступ и обновление)
-  - Аутентификация и авторизация
-  - Фильтры безопасности
+  - JWT access/refresh токены
+  - IDOR-защита: userId из `@AuthenticationPrincipal`
+  - Path Traversal защита в FileController
+  - CORS и WebSocket origins из application.yml
 
 - **Сервисный слой**:
-  - Бизнес-логика приложения
-  - Управление чатами, сообщениями, пользователями
+  - Бизнес-логика с `@Transactional`
+  - SLF4J-логирование
+  - Constructor injection (без `@Autowired`)
 
 - **Слой доступа к данным**:
-  - JPA репозитории
-  - Работа с PostgreSQL
+  - JPA/Hibernate репозитории
+  - Flyway-миграции (V1–V6)
+  - `ddl-auto: validate` (Hibernate не меняет схему)
 
-- **Конфигурационный слой**:
-  - Настройки приложения
-  - Конфигурация безопасности
-  - WebSocket конфигурация
-
-### 3. Инфраструктура
-- **PostgreSQL**: Основная реляционная база данных
-- **Redis**: Кэширование, онлайн-статусы, pub/sub
-- **RustFS**: Хранение файлов (совместимо с S3)
+### 4. Инфраструктура
+- **PostgreSQL 15**: основная реляционная БД
+- **Redis 7**: кэширование, онлайн-статусы, pub/sub
+- **MinIO**: S3-совместимое объектное хранилище (файлы)
 
 ## Потоки данных
 
 ### 1. Аутентификация
 ```
-Клиент → REST /api/auth/login → UserService → UserRepository → JWT
+Client → POST /api/auth/login → AuthController(@Valid) → UserService → JWT tokens
 ```
 
 ### 2. Отправка сообщения
 ```
-Клиент → WebSocket /app/chat.send → MessageService → MessageRepository → PostgreSQL
-→ WebSocket /topic/chat.{chatId} → Другие клиенты
+Client → WebSocket /app/chat.send → MessageService(@Transactional) → PostgreSQL
+  → WebSocket /topic/chat.{chatId} → Other clients
 ```
 
-### 3. Загрузка файла
+### 3. Создание чата (IDOR-safe)
 ```
-Клиент → REST /api/files/upload → FileService → RustFS → PostgreSQL (метаданные)
+Client → POST /api/chats (JWT) → ChatController(@AuthenticationPrincipal)
+  → ChatService(@Transactional) → Chat + UserChat(OWNER) → PostgreSQL
+```
+
+### 4. Загрузка файла
+```
+Client → POST /api/files/upload → FileController(Path Traversal check)
+  → FileService → Local storage → PostgreSQL (metadata)
 ```
 
 ## Технологический стек
 
 | Уровень | Технологии |
-|--------|------------|
-| Клиент | JavaFX, FXML, CSS |
-| Сервер | Java 17, Spring Boot 3.x, WebFlux, WebSocket/STOMP |
-| БД | PostgreSQL, JPA/Hibernate |
-| Кэш | Redis |
-| Файлы | RustFS (S3-совместимый) |
-| Безопасность | JWT, Spring Security |
+|---------|------------|
+| Web-клиент | React, Webpack, Nginx |
+| Desktop-клиент | JavaFX, FXML, CSS |
+| Сервер | Java 17, Spring Boot 3.x, Spring MVC, WebSocket/STOMP |
+| Валидация | Jakarta Validation, DTO, GlobalExceptionHandler |
+| БД | PostgreSQL 15, JPA/Hibernate, Flyway |
+| Кэш | Redis 7 |
+| Файлы | MinIO (S3-совместимый) |
+| Безопасность | JWT, Spring Security, BCrypt |
 | Контейнеризация | Docker, Docker Compose |
-| Сборка | Maven |
-
-## Взаимодействие компонентов
-
-Система использует микросервисную архитектуру с единым серверным приложением, которое взаимодействует с различными инфраструктурными компонентами. Клиентская часть реализована как десктопное JavaFX приложение, которое общается с сервером через REST API и WebSocket протоколы.
+| Оркестрация | Kubernetes, Helm |
+| Сборка | Maven (server), npm (web-client) |

@@ -1,287 +1,213 @@
-# Messenger - Платформа для полнодуплексного обмена сообщениями
+# Messenger — Платформа для обмена сообщениями в реальном времени
 
-Это полноценная платформа для обмена сообщениями в реальном времени с сервером на Java Spring Boot, клиентом JavaFX и веб-клиентом, поддерживающая обмен сообщениями в реальном времени, обмен файлами и аутентификацию пользователей.
+Полнофункциональная платформа для обмена сообщениями с сервером на Java Spring Boot, веб-клиентом на React и десктоп-клиентом JavaFX. Поддержка реального времени, обмена файлами, сквозного шифрования и аутентификации пользователей.
 
 ## Общая архитектура
 
-- **Backend**: Java 17 + Spring Boot 3.x с WebFlux (реактивный)
-- **Frontend**: Desktop-клиент JavaFX (с опциональным веб-клиентом)
-- **База данных**: PostgreSQL для основного хранения данных
-- **Кэш**: Redis для онлайн-статусов, распределенных блокировок, pub/sub
-- **Хранилище файлов**: RustFS (совместимое с S3) для вложений
+- **Backend**: Java 17 + Spring Boot 3.x (Spring MVC)
+- **Frontend**: Веб-клиент React + десктоп-клиент JavaFX
+- **База данных**: PostgreSQL 15 с Flyway-миграциями
+- **Кэш**: Redis 7 для онлайн-статусов, pub/sub
+- **Хранилище файлов**: MinIO (S3-совместимое)
 - **Реальное время**: WebSocket с протоколом STOMP
-- **Аутентификация**: JWT (токены доступа и обновления) с ролевым доступом
+- **Аутентификация**: JWT (access + refresh токены) с ролевым доступом
+- **Валидация**: Jakarta Validation (DTO с аннотациями @Valid)
+- **Безопасность**: IDOR-защита (userId из JWT), Path Traversal-защита, CORS из конфигурации
 
 ## Функции
 
 - Обмен сообщениями в реальном времени через WebSocket/STOMP
-- Аутентификация на основе JWT с процессом обновления токенов
-- Вложения файлов с потоковой передачей загрузки/скачивания
+- JWT-аутентификация с обновлением токенов
+- Вложения файлов с загрузкой/скачиванием
+- Сквозное шифрование (AES) с визуальной индикацией уровня безопасности
 - Отслеживание онлайн-статуса
-- Подтверждения доставки сообщений
-- Контроль доступа на основе ролей (пользователь/администратор)
-- Распределенная архитектура с Redis pub/sub
-- Поддержка нескольких языков (Английский, Русский, Испанский)
-- Раздел справки с инструкциями по настройке
-- Веб-клиент с интеграцией React и WebSocket
-- Сквозное шифрование с визуальной индикацией уровня безопасности
+- Контроль доступа на основе ролей (USER / ADMIN)
 - Управление участниками чата и назначение модераторов
-- Возможность изменения типа чата и настройки параметров безопасности
+- Поддержка нескольких языков (EN, RU, ES)
+- Swagger UI для документации API
+- Автоматическая очистка устаревших данных (DataPurgeService)
 
 ## Структура проекта
 
 ```
 messenger/
-├── server/
+├── server/                     # Backend (Spring Boot)
 │   ├── src/main/java/
-│   │   ├── controller/
-│   │   ├── service/
-│   │   ├── repository/
-│   │   ├── config/
-│   │   ├── model/
-│   │   └── security/
+│   │   ├── controller/         # REST-контроллеры
+│   │   ├── dto/                # DTO с валидацией
+│   │   ├── service/            # Бизнес-логика
+│   │   ├── repository/         # JPA-репозитории
+│   │   ├── config/             # Конфигурация (Security, WebSocket, CORS)
+│   │   ├── model/              # JPA-сущности
+│   │   └── security/           # JWT-фильтр, провайдер
 │   ├── src/main/resources/
-│   │   ├── application.yml
-│   │   ├── db/migration/
-│   │   └── static/
+│   │   ├── application.yml     # Настройки приложения
+│   │   └── db/migration/       # Flyway-миграции (V1–V6)
+│   ├── Dockerfile
 │   └── pom.xml
-├── client/          # Desktop-клиент JavaFX
-│   ├── src/main/java/
-│   ├── src/main/resources/
-│   │   ├── fxml/
-│   │   └── css/
-│   └── pom.xml
-├── web-client/      # Веб-клиент на React
+├── web-client/                 # Frontend (React)
 │   ├── src/
-│   │   ├── components/
-│   │   ├── i18n/
-│   │   └── App.js
-│   ├── public/
-│   ├── package.json
-│   └── webpack.config.js
-├── docker-compose.yml
-├── Dockerfile
-├── k8s/
-│   └── manifests.yml
-└── README.md
-```
-
+│   │   ├── components/         # React-компоненты
+│   │   └── i18n/               # Мультиязычность
+│   ├── Dockerfile
+│   └── package.json
+├── client/                     # Desktop-клиент (JavaFX)
+│   └── pom.xml
+├── docker-compose.yml          # Оркестрация контейнеров
+├── .env                        # Переменные окружения (не в git)
+├── helm/                       # Helm-чарт для Kubernetes
+└── k8s/                        # Kubernetes-манифесты
 ```
 
 ## Предварительные требования
 
-- Java 17
-- Docker & Docker Compose
-- Maven 3.8+
+- Docker & Docker Compose (основной способ запуска)
+- Java 17 (для локальной разработки)
+- Maven 3.8+ (для локальной разработки)
 
 ## Установка и запуск
 
-### Локальный запуск с помощью Docker Compose
+### Docker Compose (рекомендуемый способ)
 
-1. Запустить инфраструктурные сервисы:
 ```bash
-docker-compose up -d
+cd messenger
+
+# Запуск всех сервисов одной командой
+docker-compose up -d --build
+
+# Проверка статуса
+docker-compose ps
+
+# Просмотр логов сервера
+docker logs messenger-server -f
 ```
 
-2. Собрать и запустить сервер:
+После запуска:
+- **API сервер**: http://localhost:8080
+- **Swagger UI**: http://localhost:8080/swagger-ui/index.html
+- **Веб-клиент**: http://localhost:3001
+- **MinIO Console**: http://localhost:9001
+
+### Локальная разработка (без Docker)
+
+1. Запустить инфраструктуру:
+```bash
+docker-compose up -d postgres redis minio
+```
+
+2. Запустить сервер:
 ```bash
 cd server
-mvn clean install
 mvn spring-boot:run
 ```
 
-3. Собрать и запустить JavaFX клиент:
-```bash
-cd client
-mvn clean install
-mvn javafx:run
-```
-
-4. Собрать и запустить веб-клиент:
+3. Запустить веб-клиент:
 ```bash
 cd web-client
-npm install
-npm start
+npm install && npm start
 ```
 
-### Запуск в Kubernetes с помощью Helm
+### Kubernetes (Helm)
 
-1. Установить Helm chart:
 ```bash
-# Добавить репозитории для зависимостей
 helm repo add bitnami https://charts.bitnami.com/bitnami
 helm repo update
-
-# Установить chart
 helm install messenger ./helm
-```
-
-2. Для настройки параметров развертывания создайте собственный values файл:
-```bash
-# Создать файл настроек
-cat <<EOF > my-values.yaml
-# Настройки репликации
-replicaCount: 1
-
-# Настройки ресурсов
-resources:
-  limits:
-    cpu: 500m
-    memory: 1Gi
-  requests:
-    cpu: 250m
-    memory: 512Mi
-
-# Настройки базы данных
-postgresql:
-  auth:
-    postgresPassword: "mypass"
-    database: "messenger"
-
-# Настройки Redis
-redis:
-  auth:
-    enabled: false
-
-# Настройки RustFS
-rustfs:
-  auth:
-    rootUser: "rustfsadmin"
-    rootPassword: "rustfsadmin"
-
-# Настройки JWT
-env:
-  JWT_SECRET: "your-secure-jwt-secret"
-EOF
-
-# Установить с настройками
-helm install messenger ./helm -f my-values.yaml
-```
-
-3. Для обновления развертывания:
-```bash
-helm upgrade messenger ./helm -f my-values.yaml
-```
-
-4. Для удаления:
-```bash
-helm uninstall messenger
-```
-
-### Продуктовое развертывание
-
-1. Собрать Docker-образы:
-```bash
-mvn clean install
-docker build -t messenger-server .
-```
-
-2. Развернуть с помощью Kubernetes:
-```bash
-kubectl apply -f k8s/manifests.yml
 ```
 
 ## Конфигурация
 
-### Переменные окружения
+### Переменные окружения (.env)
 
-- `DB_HOST`: Хост PostgreSQL (по умолчанию: localhost)
-- `DB_PORT`: Порт PostgreSQL (по умолчанию: 5432)
-- `DB_NAME`: Имя базы данных (по умолчанию: messenger)
-- `REDIS_HOST`: Хост Redis (по умолчанию: localhost)
-- `S3_ENDPOINT`: Совместимая с S3 конечная точка MinIO
-- `JWT_SECRET`: Секретный ключ для подписи JWT
-- `JWT_ACCESS_TOKEN_EXPIRATION`: Время жизни токена доступа (по умолчанию: 15м)
-- `JWT_REFRESH_TOKEN_EXPIRATION`: Время жизни токена обновления (по умолчанию: 7д)
+| Переменная | Описание | По умолчанию |
+|-----------|----------|-------------|
+| `POSTGRES_DB` | Имя базы данных | messenger |
+| `POSTGRES_USER` | Пользователь БД | postgres |
+| `POSTGRES_PASSWORD` | Пароль БД | postgres |
+| `MINIO_ROOT_USER` | MinIO логин | minioadmin |
+| `MINIO_ROOT_PASSWORD` | MinIO пароль | minioadmin |
+| `JWT_SECRET` | Секрет JWT | (из application.yml) |
 
-### Миграция базы данных
+### Миграции базы данных
 
-Flyway используется для миграций базы данных. Новые миграции должны добавляться в `server/src/main/resources/db/migration/` в формате `V[version]__[description].sql`.
+Flyway управляет миграциями автоматически. Файлы миграций: `server/src/main/resources/db/migration/V[N]__[description].sql`.
+
+| Миграция | Описание |
+|----------|----------|
+| V1 | Создание таблиц (users, chats, messages, files, user_settings) |
+| V2 | Добавление admin-пользователя |
+| V3 | LDAP-настройки |
+| V4 | Политики безопасности |
+| V5 | Поля шифрования (encrypted, encryption_key, encryption_algorithm, security_level) |
+| V6 | Таблицы файлов и связей message_files |
 
 ## Конечные точки API
 
-### REST API
-- `POST /api/auth/login` - Вход пользователя
-- `POST /api/auth/register` - Регистрация пользователя
-- `POST /api/auth/refresh` - Обновление токена
-- `GET /api/users/me` - Получить текущего пользователя
-- `GET /api/chats` - Получить чаты пользователя
-- `POST /api/chats` - Создать новый чат с возможностью настройки шифрования
-- `PUT /api/chats/{chatId}/type` - Изменить тип чата
-- `PUT /api/chats/{chatId}/encryption` - Настроить параметры шифрования чата
-- `PUT /api/chats/{chatId}/moderator` - Назначить модератора чата
-- `DELETE /api/chats/{chatId}/members/{userId}` - Удалить участника из чата
-- `GET /api/messages/{chatId}` - Получить сообщения чата
-- `POST /api/files/upload` - Загрузить файл с предварительно подписанным URL
-- `GET /api/files/{fileId}` - Скачать файл
+### Аутентификация
+| Метод | Путь | Описание | Auth |
+|-------|------|----------|------|
+| POST | `/api/auth/register` | Регистрация пользователя | ❌ |
+| POST | `/api/auth/login` | Вход пользователя | ❌ |
+| POST | `/api/auth/refresh` | Обновление токена | ❌ |
 
-### WebSocket конечные точки
-- `/ws` - Конечная точка подключения WebSocket
-- `/app/chat.send` - Отправить сообщение
-- `/app/chat.join` - Присоединиться к чату
-- `/app/chat.leave` - Покинуть чат
-- `/user/queue/messages` - Приватные сообщения пользователя
-- `/topic/chat.{chatId}` - Широковещательные сообщения чата
+### Чаты (userId извлекается из JWT)
+| Метод | Путь | Описание | Auth |
+|-------|------|----------|------|
+| GET | `/api/chats` | Чаты текущего пользователя | ✅ |
+| POST | `/api/chats` | Создать чат | ✅ |
+| GET | `/api/chats/{chatId}` | Получить чат по ID | ✅ |
+| POST | `/api/chats/{chatId}/members` | Добавить участника | ✅ |
+| DELETE | `/api/chats/{chatId}/members/{userId}` | Удалить участника | ✅ |
+| PUT | `/api/chats/{chatId}/type` | Изменить тип чата | ✅ |
+| PUT | `/api/chats/{chatId}/encryption` | Настройки шифрования | ✅ |
+| PUT | `/api/chats/{chatId}/moderator` | Назначить модератора | ✅ |
 
-### Дополнительные REST API конечные точки для управления чатами
-- `POST /api/chats/{chatId}/members?userId={userId}&role={role}` - Добавить участника в чат
-- `DELETE /api/chats/{chatId}/members/{userId}` - Удалить участника из чата
-- `PUT /api/chats/{chatId}/type?type={type}` - Изменить тип чата
-- `PUT /api/chats/{chatId}/encryption?encrypted={true/false}&encryptionAlgorithm={algorithm}&securityLevel={level}` - Настроить шифрование чата
-- `PUT /api/chats/{chatId}/moderator?userId={userId}` - Назначить модератора чата
+### Сообщения (senderId извлекается из JWT)
+| Метод | Путь | Описание | Auth |
+|-------|------|----------|------|
+| GET | `/api/messages/chat/{chatId}` | Сообщения чата | ✅ |
+| POST | `/api/messages/create` | Отправить сообщение | ✅ |
+
+### Файлы
+| Метод | Путь | Описание | Auth |
+|-------|------|----------|------|
+| POST | `/api/files/upload` | Загрузить файл | ✅ |
+| GET | `/api/files/{fileId}` | Скачать файл | ✅ |
+
+### WebSocket
+| Путь | Описание |
+|------|----------|
+| `/ws` | Точка подключения WebSocket |
+| `/app/chat.send` | Отправка сообщения |
+| `/app/chat.join` | Присоединение к чату |
+| `/app/chat.leave` | Выход из чата |
+| `/user/queue/messages` | Приватные сообщения |
+| `/topic/chat.{chatId}` | Сообщения чата |
 
 ## Безопасность
 
-- JWT токены для аутентификации
-- HTTPS/WSS для безопасной связи
-- CORS настроен для веб-клиента
-- Реализовано ограничение скорости запросов
-- Учетные данные S3 должным образом защищены
-- Следование рекомендациям безопасности OWASP
-- Сквозное шифрование сообщений с возможностью настройки уровня безопасности
-- Визуальная индикация уровня шифрования в интерфейсе (зеленый - защищенный, желтый - частично защищенный, красный - небезопасный)
-- Возможность управления участниками чата и контроль доступа к зашифрованным сообщениям
+- JWT-токены с access/refresh механизмом
+- IDOR-защита: userId/senderId извлекаются из JWT (`@AuthenticationPrincipal`)
+- Path Traversal защита в FileController
+- Валидация входных данных через DTO (@Valid, @NotBlank, @Size, @Email)
+- GlobalExceptionHandler для унифицированных ответов об ошибках
+- CORS из конфигурации (не wildcard)
+- WebSocket origins из конфигурации
+- Пароли хешируются BCrypt
+- Транзакционность (@Transactional) в сервисном слое
+- SLF4J-логирование (без System.err)
+- Креды в .env, не в docker-compose.yml
 
 ## Мониторинг
 
-- Spring Actuator для проверки состояния и метрик
-- Структурированный JSON-логгинг
-- Интеграция с Prometheus для сбора метрик
-- Предопределенная конфигурация панели Grafana
+- Spring Actuator: `/actuator/health`, `/actuator/info`
+- Swagger UI: `/swagger-ui/index.html`
+- Структурированное логирование через SLF4J
 
-## Тестирование
+## Учётные данные по умолчанию
 
-- Модульные тесты для сервисов и репозиториев
-- Интеграционные тесты для контроллеров
-- Нагрузочное тестирование WebSocket сценарием JMeter/Locust
-- Тесты безопасности для процесса аутентификации
-
-## Рекомендации по масштабированию
-
-- Использовать sticky-сессии или stateless-WebSocket с Redis pub/sub
-- Разделение таблицы сообщений по дате/пользователю
-- Репликация и стратегия резервного копирования PostgreSQL
-- Redis Sentinel/Cluster для высокой доступности
-- Горизонтальное масштабирование подов в Kubernetes
-
-## Замена RustFS на MinIO/AWS S3
-
-Для переключения с RustFS на MinIO или AWS S3:
-
-1. Обновите конечную точку S3 в `application.yml`:
-```yaml
-s3:
-  endpoint: "https://s3.amazonaws.com" # Для AWS S3
-  # или
-  endpoint: "http://rustfs:9000" # Для RustFS
-```
-
-2. Обновите учетные данные соответствующим образом в переменных окружения или конфигурации
-3. Совместимый с S3 API означает, что изменения в коде не требуются
-
-## Известные замечания по безопасности
-
-- Регулярно отслеживайте CVE и патчи безопасности для RustFS
-- Обеспечьте правильную изоляцию сети для внутренних сервисов
-- Регулярные аудиты безопасности реализации JWT
-- Безопасная обработка токенов обновления в Redis
+| Сервис | Логин | Пароль |
+|--------|-------|--------|
+| Приложение (admin) | admin | admin123 |
+| PostgreSQL | postgres | postgres |
+| MinIO | minioadmin | minioadmin |

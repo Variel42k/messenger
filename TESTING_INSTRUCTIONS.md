@@ -1,133 +1,133 @@
-# Инструкции по тестированию приложения Messenger
+# Инструкции по тестированию Messenger
 
-## Подготовка к тестированию
+## Подготовка
 
 ### Требования
-- Java 17
-- Maven 3.8+
-- Docker & Docker Compose (для запуска инфраструктуры)
-- PostgreSQL (если запускается без Docker)
-- Redis (если запускается без Docker)
+- Docker & Docker Compose (основной способ)
+- Java 17 + Maven 3.8+ (для локальной разработки)
 
-## Запуск с использованием Docker (рекомендуемый способ)
+## Запуск с Docker (рекомендуемый)
 
-1. Убедитесь, что Docker Desktop запущен
-2. Запустите инфраструктуру:
 ```bash
 cd messenger
-docker-compose up -d
+
+# Запуск всех сервисов
+docker-compose up -d --build
+
+# Проверка запуска
+docker-compose ps
+docker logs messenger-server --tail 30
+
+# Ожидание строки "Started MessengerApplication in X seconds"
 ```
 
-3. Соберите и запустите сервер:
+Сервисы после запуска:
+- API: http://localhost:8080
+- Swagger UI: http://localhost:8080/swagger-ui/index.html
+- Web-client: http://localhost:3001
+- MinIO Console: http://localhost:9001
+
+## Тестирование API (curl)
+
+### 1. Регистрация
 ```bash
-cd server
-mvn clean install
-mvn spring-boot:run
+curl -X POST http://localhost:8080/api/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{"username":"testuser","email":"test@example.com","password":"Strong1!"}'
 ```
 
-4. В другом терминале запустите клиент:
+### 2. Вход
 ```bash
-cd client
-mvn clean install
-mvn javafx:run
+curl -X POST http://localhost:8080/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"username":"testuser","password":"Strong1!"}'
+# → {"accessToken":"...", "refreshToken":"...", "tokenType":"Bearer"}
 ```
 
-## Запуск без Docker
-
-### Настройка базы данных
-1. Установите PostgreSQL локально
-2. Создайте базу данных `messenger`
-3. Настройте учетные данные в `server/src/main/resources/application.yml`
-
-### Настройка Redis
-1. Установите Redis локально
-2. Убедитесь, что Redis запущен на стандартном порту
-
-### Запуск приложения
-1. Соберите сервер:
+### 3. Создание чата (userId из JWT)
 ```bash
-cd messenger/server
-mvn clean install
+TOKEN="<accessToken из шага 2>"
+
+curl -X POST http://localhost:8080/api/chats \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"name":"Test Chat","type":"GROUP"}'
 ```
 
-2. Запустите сервер:
+### 4. Получение чатов (userId из JWT)
 ```bash
-mvn spring-boot:run
+curl -X GET http://localhost:8080/api/chats \
+  -H "Authorization: Bearer $TOKEN"
 ```
 
-3. В другом терминале запустите клиент:
+### 5. Отправка сообщения (senderId из JWT)
 ```bash
-cd messenger/client
-mvn clean install
-mvn javafx:run
+curl -X POST "http://localhost:8080/api/messages/create?chatId=1&content=Hello" \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+### 6. Получение сообщений
+```bash
+curl -X GET http://localhost:8080/api/messages/chat/1 \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+### 7. Обновление токена
+```bash
+curl -X POST http://localhost:8080/api/auth/refresh \
+  -H "Content-Type: application/json" \
+  -d '{"refreshToken":"<refreshToken из шага 2>"}'
+```
+
+### 8. Валидация (ожидается 400)
+```bash
+curl -X POST http://localhost:8080/api/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{"username":"x","email":"bad","password":"1"}'
+# → 400 {"errors":{"username":"...","email":"...","password":"..."},"message":"Validation failed"}
 ```
 
 ## Тестирование функциональности
 
-### 1. Регистрация и аутентификация
-1. Откройте клиент
-2. Попробуйте зарегистрировать нового пользователя
-3. Проверьте, что регистрация проходит успешно
-4. Войдите с созданным пользователем
-5. Проверьте, что токен аутентификации корректно сохраняется
+### Аутентификация
+1. Зарегистрировать пользователя → ожидать 200
+2. Войти → получить access+refresh токены
+3. Отправить запрос с невалидными данными → ожидать 400
+4. Войти с неверным паролем → ожидать 401
 
-### 2. Создание чатов
-1. Войдите в систему
-2. Попробуйте создать новый чат
-3. Проверьте, что чат отображается в списке
-4. Попробуйте создать разные типы чатов (личные, групповые)
+### Чаты
+1. Создать чат → проверить id, name в ответе
+2. Получить чаты → проверить список (userId из JWT, не из параметра)
+3. Добавить/удалить участника
 
-### 3. Отправка сообщений
-1. Выберите или создайте чат
-2. Отправьте текстовое сообщение
-3. Проверьте, что сообщение отображается в списке
-4. Попробуйте отправить сообщение с файлом (если поддерживается)
+### Сообщения
+1. Отправить сообщение → проверить id, content
+2. Получить сообщения чата → проверить список
 
-### 4. WebSocket соединение
-1. Проверьте, что статус соединения отображается как "Connected"
-2. Проверьте, что сообщения приходят в реальном времени
-3. Попробуйте открыть несколько клиентов и проверить обмен сообщениями
+### Безопасность
+1. Запрос без токена на защищённый endpoint → 401/403
+2. Swagger UI без токена → 200 (открытый)
+3. Невалидный JWT → 401
 
-### 5. Управление участниками
-1. В групповом чате попробуйте добавить нового участника
-2. Проверьте, что список участников обновляется
+## Логи
 
-## Тестирование API (через curl или Postman)
-
-### Регистрация пользователя
 ```bash
-curl -X POST http://localhost:8080/api/auth/register \
-  -H "Content-Type: application/json" \
-  -d '{"username": "testuser", "email": "test@example.com", "password": "password123"}'
+# Логи сервера
+docker logs messenger-server -f
+
+# Логи БД
+docker logs messenger-postgres --tail 20
+
+# Все логи
+docker-compose logs -f
 ```
 
-### Вход в систему
+## Остановка
+
 ```bash
-curl -X POST http://localhost:8080/api/auth/login \
-  -H "Content-Type: application/json" \
- -d '{"username": "testuser", "password": "password123"}'
+# Остановка без удаления данных
+docker-compose down
+
+# Полная очистка (с удалением данных)
+docker-compose down -v
 ```
-
-### Получение списка чатов
-```bash
-curl -X GET http://localhost:8080/api/chats \
-  -H "Authorization: Bearer <access_token>"
-```
-
-### Отправка сообщения
-```bash
-curl -X POST http://localhost:8080/api/messages \
-  -H "Content-Type: application/json" \
- -H "Authorization: Bearer <access_token>" \
- -d '{"chatId": 1, "content": "Тестовое сообщение", "senderId": 1}'
-```
-
-## Проверка логов
-1. Проверьте логи сервера на наличие ошибок
-2. Проверьте логи клиента на наличие ошибок
-3. Убедитесь, что все операции проходят без исключений
-
-## Тестирование безопасности
-1. Проверьте, что защищенные эндпоинты требуют аутентификации
-2. Проверьте, что токены JWT корректно обновляются
-3. Проверьте, что у неавторизованных пользователей нет доступа к защищенным ресурсам
