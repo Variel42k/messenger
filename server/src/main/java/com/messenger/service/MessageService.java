@@ -7,7 +7,10 @@ import com.messenger.model.MessageFile;
 import com.messenger.model.enums.MessageStatus;
 import com.messenger.repository.MessageFileRepository;
 import com.messenger.repository.MessageRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Optional;
@@ -15,18 +18,22 @@ import java.util.Optional;
 @Service
 public class MessageService {
 
+    private static final Logger logger = LoggerFactory.getLogger(MessageService.class);
+
     private final MessageRepository messageRepository;
     private final MessageFileRepository messageFileRepository;
     private final ChatService chatService;
     private final EncryptionService encryptionService;
 
-    public MessageService(MessageRepository messageRepository, MessageFileRepository messageFileRepository, ChatService chatService, EncryptionService encryptionService) {
+    public MessageService(MessageRepository messageRepository, MessageFileRepository messageFileRepository,
+            ChatService chatService, EncryptionService encryptionService) {
         this.messageRepository = messageRepository;
         this.messageFileRepository = messageFileRepository;
         this.chatService = chatService;
         this.encryptionService = encryptionService;
     }
 
+    @Transactional(readOnly = true)
     public List<Message> getChatMessages(Long chatId) {
         List<Message> messages = messageRepository.findByChat_IdOrderByCreatedAtAsc(chatId);
         // Если чат зашифрован, расшифровываем сообщения перед возвратом
@@ -40,7 +47,7 @@ public class MessageService {
                         msg.setEncrypted(false); // Указываем, что содержимое теперь в открытом виде
                     } catch (Exception e) {
                         // Логируем ошибку, но не прерываем выполнение
-                        System.err.println("Ошибка при расшифровке сообщения: " + e.getMessage());
+                        logger.warn("Error decrypting message: {}", e.getMessage());
                     }
                 }
             }
@@ -48,6 +55,7 @@ public class MessageService {
         return messages;
     }
 
+    @Transactional
     public Message saveMessage(Message message) {
         // Если чат зашифрован, шифруем сообщение перед сохранением
         Chat chat = chatService.getChatById(message.getChat().getId()).orElse(null);
@@ -58,12 +66,13 @@ public class MessageService {
                 message.setEncrypted(true); // Указываем, что содержимое зашифровано
             } catch (Exception e) {
                 // Логируем ошибку, но не прерываем выполнение
-                System.err.println("Ошибка при шифровании сообщения: " + e.getMessage());
+                logger.warn("Error encrypting message: {}", e.getMessage());
             }
         }
         return messageRepository.save(message);
     }
 
+    @Transactional
     public Message saveMessageWithFile(Message message, File file) {
         // Если чат зашифрован, шифруем содержимое сообщения перед сохранением
         Chat chat = chatService.getChatById(message.getChat().getId()).orElse(null);
@@ -74,12 +83,12 @@ public class MessageService {
                 message.setEncrypted(true); // Указываем, что содержимое зашифровано
             } catch (Exception e) {
                 // Логируем ошибку, но не прерываем выполнение
-                System.err.println("Ошибка при шифровании сообщения: " + e.getMessage());
+                logger.warn("Error encrypting message: {}", e.getMessage());
             }
         }
-        
+
         Message savedMessage = messageRepository.save(message);
-        
+
         if (file != null) {
             // Создаем связь между сообщением и файлом
             MessageFile messageFile = new MessageFile();
@@ -88,13 +97,14 @@ public class MessageService {
             // Сохраняем связь между сообщением и файлом
             messageFileRepository.save(messageFile);
         }
-        
+
         return savedMessage;
     }
 
     /**
      * Создает сообщение с использованием ID чата и отправителя
      */
+    @Transactional
     public Message createMessage(Long chatId, Long senderId, String content) {
         // Получаем чат по ID
         Chat chat = chatService.getChatById(chatId).orElse(null);
@@ -116,7 +126,7 @@ public class MessageService {
                 message.setEncrypted(true); // Указываем, что содержимое зашифровано
             } catch (Exception e) {
                 // Логируем ошибку, но не прерываем выполнение
-                System.err.println("Ошибка при шифровании сообщения: " + e.getMessage());
+                logger.warn("Error encrypting message: {}", e.getMessage());
             }
         }
 

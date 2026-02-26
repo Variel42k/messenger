@@ -26,9 +26,9 @@ public class LdapSettingsController {
     public ResponseEntity<?> saveLdapSettings(@RequestBody LdapSettingsDto settings) {
         try {
             ldapService.saveLdapSettings(settings);
-            return ResponseEntity.ok().body("{\"message\": \"LDAP settings saved successfully\"}");
+            return ResponseEntity.ok().body(Map.of("message", "LDAP settings saved successfully"));
         } catch (Exception e) {
-            return ResponseEntity.badRequest().body("{\"error\": \"" + e.getMessage() + "\"}");
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         }
     }
 
@@ -47,17 +47,19 @@ public class LdapSettingsController {
         try {
             boolean connected = ldapService.testConnection();
             if (connected) {
-                return ResponseEntity.ok().body("{\"success\": true, \"message\": \"LDAP connection successful\"}");
+                return ResponseEntity.ok().body(Map.of("success", true, "message", "LDAP connection successful"));
             } else {
-                return ResponseEntity.badRequest().body("{\"success\": false, \"message\": \"Failed to connect to LDAP server\"}");
+                return ResponseEntity.badRequest()
+                        .body(Map.of("success", false, "message", "Failed to connect to LDAP server"));
             }
         } catch (Exception e) {
-            return ResponseEntity.badRequest().body("{\"success\": false, \"message\": \"" + e.getMessage() + "\"}");
+            return ResponseEntity.badRequest().body(Map.of("success", false, "message", e.getMessage()));
         }
     }
 
     /**
-     * Возвращает справочную информацию по настройке LDAP для различных типов доменов
+     * Возвращает справочную информацию по настройке LDAP для различных типов
+     * доменов
      */
     @GetMapping("/ldap-configuration-help")
     public ResponseEntity<Map<String, Object>> getLdapConfigurationHelp() {
@@ -67,28 +69,27 @@ public class LdapSettingsController {
         Map<String, Object> windowsConfig = new HashMap<>();
         windowsConfig.put("description", "Как настроить аутентификацию LDAP с контроллером домена Windows:");
         windowsConfig.put("steps", Arrays.asList(
-            "Откройте Active Directory Users and Computers",
-            "Перейдите к организационному подразделению (OU), содержащему пользователей",
-            "Определите базовый DN (например, DC=company,DC=com)",
-            "Создайте служебную учетную запись с правами чтения данных пользователей",
-            "Используйте LDAPS (ldaps://) для безопасных подключений",
-            "Общий шаблон DN пользователя: CN={0},OU=Users,DC=company,DC=com"
-        ));
+                "Откройте Active Directory Users and Computers",
+                "Перейдите к организационному подразделению (OU), содержащему пользователей",
+                "Определите базовый DN (например, DC=company,DC=com)",
+                "Создайте служебную учетную запись с правами чтения данных пользователей",
+                "Используйте LDAPS (ldaps://) для безопасных подключений",
+                "Общий шаблон DN пользователя: CN={0},OU=Users,DC=company,DC=com"));
 
         // Информация о настройке домена Linux
         Map<String, Object> linuxConfig = new HashMap<>();
         linuxConfig.put("description", "Как настроить аутентификацию LDAP с сервером Linux OpenLDAP:");
         linuxConfig.put("steps", Arrays.asList(
-            "Установите и настройте сервер OpenLDAP",
-            "Настройте структуру каталогов и базовый DN",
-            "Создайте пользователя привязки с соответствующими разрешениями",
-            "Настройте SSL/TLS при необходимости",
-            "Общий шаблон DN пользователя: uid={0},ou=people,dc=example,dc=com"
-        ));
+                "Установите и настройте сервер OpenLDAP",
+                "Настройте структуру каталогов и базовый DN",
+                "Создайте пользователя привязки с соответствующими разрешениями",
+                "Настройте SSL/TLS при необходимости",
+                "Общий шаблон DN пользователя: uid={0},ou=people,dc=example,dc=com"));
 
         // Общие URL-адреса LDAP
         Map<String, String> commonUrls = new HashMap<>();
-        commonUrls.put("windowsLdapUrl", "ldap://domain-controller.company.com:389 или ldaps://domain-controller.company.com:636");
+        commonUrls.put("windowsLdapUrl",
+                "ldap://domain-controller.company.com:389 или ldaps://domain-controller.company.com:636");
         commonUrls.put("openLdapUrl", "ldap://ldap.example.com:389 или ldaps://ldap.example.com:636");
 
         helpInfo.put("windowsDomainConfiguration", windowsConfig);
