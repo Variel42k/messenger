@@ -14,9 +14,7 @@
     "react-i18next": "^13.5.0",
     "i18next": "^23.7.6",
     "axios": "^1.6.0",
-    "websocket": "^1.0.34",
-    "i18next": "^23.7.6",
-    "react-i18next": "^13.5.0"
+    "websocket": "^1.0.34"
   },
   "devDependencies": {
     "@babel/core": "^7.23.0",

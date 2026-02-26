@@ -1,5 +1,7 @@
--- Создание таблицы для хранения информации о файлах
-CREATE TABLE files (
+-- Create files and message_files tables if they don't already exist
+-- (V1 migration may have already created them)
+
+CREATE TABLE IF NOT EXISTS files (
     id BIGSERIAL PRIMARY KEY,
     original_name VARCHAR(255) NOT NULL,
     stored_name VARCHAR(255) NOT NULL,
@@ -12,8 +14,7 @@ CREATE TABLE files (
     expires_at TIMESTAMP
 );
 
--- Создание таблицы для связи файлов и сообщений
-CREATE TABLE message_files (
+CREATE TABLE IF NOT EXISTS message_files (
     id BIGSERIAL PRIMARY KEY,
     message_id BIGINT NOT NULL,
     file_id BIGINT NOT NULL,
@@ -21,8 +22,8 @@ CREATE TABLE message_files (
     FOREIGN KEY (file_id) REFERENCES files(id) ON DELETE CASCADE
 );
 
--- Добавление индексов для повышения производительности
-CREATE INDEX idx_message_files_message_id ON message_files(message_id);
-CREATE INDEX idx_message_files_file_id ON message_files(file_id);
-CREATE INDEX idx_files_uploaded_by ON files(uploaded_by);
-CREATE INDEX idx_files_uploaded_at ON files(uploaded_at);
+-- Add indexes if they don't exist (PostgreSQL will skip if already present)
+CREATE INDEX IF NOT EXISTS idx_message_files_message_id ON message_files(message_id);
+CREATE INDEX IF NOT EXISTS idx_message_files_file_id ON message_files(file_id);
+CREATE INDEX IF NOT EXISTS idx_files_uploaded_by ON files(uploaded_by);
+CREATE INDEX IF NOT EXISTS idx_files_uploaded_at ON files(uploaded_at);

@@ -10,8 +10,6 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
-import java.time.ZoneId;
-import java.util.Date;
 
 /**
  * Сервис для автоматической очистки устаревших данных
@@ -26,7 +24,6 @@ public class DataPurgeService {
 
     @Autowired
     private ChatRepository chatRepository;
-
 
     @Value("${app.data-retention-period:30}")
     private int dataRetentionPeriod;
@@ -49,10 +46,9 @@ public class DataPurgeService {
         try {
             // Вычисляем дату, до которой удалять данные
             LocalDateTime cutoffDate = LocalDateTime.now().minusDays(dataRetentionPeriod);
-            Date cutoffDateAsDate = Date.from(cutoffDate.atZone(ZoneId.systemDefault()).toInstant());
 
             // Удаляем старые сообщения
-            int deletedMessages = messageRepository.deleteByCreatedAtBefore(cutoffDateAsDate);
+            int deletedMessages = messageRepository.deleteByCreatedAtBefore(cutoffDate);
             logger.info("Deleted {} messages older than {}", deletedMessages, cutoffDate);
 
             // Удаляем старые файлы, если они связаны с удаленными сообщениями
@@ -82,9 +78,8 @@ public class DataPurgeService {
 
         try {
             LocalDateTime cutoffDate = LocalDateTime.now().minusDays(retentionPeriodDays);
-            Date cutoffDateAsDate = Date.from(cutoffDate.atZone(ZoneId.systemDefault()).toInstant());
 
-            int deletedMessages = messageRepository.deleteByCreatedAtBefore(cutoffDateAsDate);
+            int deletedMessages = messageRepository.deleteByCreatedAtBefore(cutoffDate);
             logger.info("Manually deleted {} messages older than {}", deletedMessages, cutoffDate);
 
             // int deletedFiles = fileRepository.deleteOlderThan(cutoffDateAsDate);
