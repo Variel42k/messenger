@@ -90,7 +90,7 @@ effective_io_concurrency = 200 (для SSD)
 - **WebSocket**: 8080
 - **PostgreSQL**: 5432
 - **Redis**: 6379
-- **S3**: 9000 (если используется RustFS)
+- **S3**: 9000 (MinIO)
 
 ### Безопасность сети
 - Настроенный брандмауэр
