@@ -1,0 +1,330 @@
+﻿<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Messenger Chat Shapes</title>
+  <script src="https://mcp.figma.com/mcp/html-to-design/capture.js" async></script>
+  <style>
+    :root {
+      --bg: #d0d3d6;
+      --nav: #2a4157;
+      --nav-item: #395a78;
+      --primary: #3a97d4;
+      --card: #eef1f3;
+      --panel: #f6f8f9;
+      --line: #cfd5da;
+      --ink: #31495f;
+      --muted: #b8c0c6;
+      --success: #2dbf67;
+      --danger: #ef5d4f;
+      --warn: #f3a538;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      min-height: 100vh;
+      font-family: "Segoe UI", sans-serif;
+      padding: 8px;
+    }
+
+    .screen {
+      width: min(1540px, 100%);
+      min-height: calc(100vh - 16px);
+      margin: 0 auto;
+      border: 1px solid #c1c7cc;
+      background: var(--bg);
+    }
+
+    .topbar {
+      height: 62px;
+      background: var(--nav);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 16px;
+    }
+
+    .brand { width: 180px; height: 30px; border-radius: 6px; background: #e8edf1; }
+
+    .top-controls { display: flex; gap: 10px; align-items: center; }
+    .ctl { height: 30px; border-radius: 4px; background: var(--nav-item); border: 1px solid rgba(255,255,255,0.22); }
+    .ctl.s1 { width: 84px; }
+    .ctl.s2 { width: 98px; }
+    .ctl.s3 { width: 88px; background: #e7eaed; border: none; }
+    .ctl.s4 { width: 58px; background: #e7eaed; border: none; }
+    .ctl.s5 { width: 54px; background: var(--primary); border: none; }
+    .ctl.s6 { width: 52px; }
+
+    .chat-shell {
+      margin: 12px;
+      background: #f3f6f8;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      overflow: hidden;
+      display: grid;
+      grid-template-rows: 52px 1fr;
+      min-height: calc(100vh - 112px);
+    }
+
+    .security-bar {
+      background: var(--nav);
+      position: relative;
+      border-bottom: 1px solid #22384f;
+    }
+
+    .security-pill {
+      position: absolute;
+      right: 12px;
+      top: 10px;
+      width: 205px;
+      height: 30px;
+      border-radius: 16px;
+      background: var(--success);
+    }
+
+    .content {
+      display: grid;
+      grid-template-columns: 380px 1fr;
+      min-height: 0;
+    }
+
+    .sidebar {
+      border-right: 1px solid var(--line);
+      background: var(--panel);
+      display: grid;
+      grid-template-rows: 78px 52px 1fr;
+    }
+
+    .sidebar-head {
+      padding: 14px;
+      border-bottom: 1px solid var(--line);
+      position: relative;
+    }
+
+    .side-title { width: 90px; height: 26px; border-radius: 5px; background: #2d475f; margin-top: 8px; }
+    .plus { position: absolute; right: 16px; top: 20px; width: 30px; height: 30px; border-radius: 50%; background: var(--primary); }
+
+    .search-row {
+      border-bottom: 1px solid var(--line);
+      padding: 8px 10px;
+      display: grid;
+      grid-template-columns: 1fr 36px;
+      gap: 8px;
+    }
+
+    .search-input { height: 34px; border-radius: 4px; border: 1px solid var(--line); background: #fff; }
+    .search-btn { height: 34px; border-radius: 4px; background: var(--primary); }
+
+    .chat-list { padding: 0; margin: 0; list-style: none; }
+    .item {
+      height: 112px;
+      border-bottom: 1px solid #dde2e6;
+      padding: 12px;
+      background: transparent;
+      position: relative;
+    }
+
+    .item.active { background: var(--primary); }
+    .name { width: 146px; height: 20px; border-radius: 4px; background: #294259; }
+    .item.active .name { background: #dce7ef; }
+    .meta { width: 120px; height: 14px; border-radius: 3px; background: #5887ad; margin-top: 8px; }
+    .item.active .meta { background: rgba(255,255,255,0.55); }
+    .preview { width: 190px; height: 16px; border-radius: 3px; background: #7fa0bb; margin-top: 8px; }
+    .item.active .preview { background: rgba(255,255,255,0.45); }
+    .dot { position: absolute; right: 42px; top: 20px; width: 18px; height: 18px; border-radius: 50%; }
+    .dot.g { background: var(--success); }
+    .dot.r { background: var(--danger); }
+    .dot.y { background: var(--warn); }
+    .badge { position: absolute; right: 12px; top: 40px; width: 24px; height: 24px; border-radius: 50%; background: var(--danger); }
+
+    .main {
+      display: grid;
+      grid-template-rows: 64px 174px 1fr 130px;
+      background: #f7f8f9;
+      min-height: 0;
+    }
+
+    .chat-head {
+      border-bottom: 1px solid var(--line);
+      background: #fff;
+      padding: 14px 16px;
+      position: relative;
+    }
+
+    .h-title { width: 120px; height: 24px; border-radius: 5px; background: #2e465d; }
+    .h-tag { position: absolute; right: 12px; top: 18px; width: 64px; height: 24px; border-radius: 4px; background: var(--primary); }
+
+    .members {
+      border-bottom: 1px solid var(--line);
+      padding: 12px 14px;
+      background: #f9fbfd;
+    }
+
+    .m-title { width: 110px; height: 18px; border-radius: 4px; background: #667c90; margin-bottom: 10px; }
+    .m-row { height: 18px; background: #cfd7de; border-radius: 3px; margin-bottom: 10px; width: 95%; }
+    .m-row.w2 { width: 88%; }
+    .m-row.w3 { width: 92%; }
+    .add-row { margin-top: 8px; display: grid; grid-template-columns: 1fr 100px 54px; gap: 8px; }
+    .add-field, .add-role { height: 34px; border-radius: 4px; border: 1px solid var(--line); background: #fff; }
+    .add-btn { height: 34px; border-radius: 4px; background: #30b25a; }
+
+    .messages {
+      border-bottom: 1px solid var(--line);
+      padding: 14px;
+      overflow: hidden;
+    }
+
+    .bubble {
+      border-radius: 8px;
+      background: #e5e9ed;
+      margin-bottom: 14px;
+      padding: 10px;
+      width: 72%;
+      height: 98px;
+      position: relative;
+    }
+
+    .bubble.self {
+      margin-left: auto;
+      background: var(--primary);
+    }
+
+    .line { height: 12px; border-radius: 3px; background: #b4bdc5; margin-bottom: 8px; width: 88%; }
+    .line.w2 { width: 94%; }
+    .line.w3 { width: 64%; }
+    .bubble.self .line { background: rgba(255,255,255,0.72); }
+    .reply { position: absolute; right: 8px; bottom: 8px; width: 30px; height: 10px; border-radius: 3px; background: #88c0e5; }
+
+    .composer {
+      padding: 12px;
+      display: grid;
+      grid-template-rows: 1fr auto;
+      gap: 8px;
+      background: #fff;
+    }
+
+    .text-area { border: 1px solid var(--line); border-radius: 4px; background: #fff; }
+    .actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+    }
+
+    .send { width: 56px; height: 66px; border-radius: 4px; background: var(--primary); }
+    .clip { width: 26px; height: 26px; border-radius: 4px; background: #6bb0dd; align-self: flex-end; }
+
+    @media (max-width: 1100px) {
+      .content { grid-template-columns: 1fr; }
+      .sidebar { display: none; }
+      .main { grid-template-rows: 64px 150px 1fr 120px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="screen">
+    <div class="topbar">
+      <div class="brand"></div>
+      <div class="top-controls">
+        <div class="ctl s1"></div>
+        <div class="ctl s2"></div>
+        <div class="ctl s3"></div>
+        <div class="ctl s4"></div>
+        <div class="ctl s5"></div>
+        <div class="ctl s6"></div>
+      </div>
+    </div>
+
+    <div class="chat-shell">
+      <div class="security-bar"><div class="security-pill"></div></div>
+
+      <div class="content">
+        <aside class="sidebar">
+          <div class="sidebar-head">
+            <div class="side-title"></div>
+            <div class="plus"></div>
+          </div>
+          <div class="search-row">
+            <div class="search-input"></div>
+            <div class="search-btn"></div>
+          </div>
+          <ul class="chat-list">
+            <li class="item active">
+              <div class="name"></div>
+              <div class="meta"></div>
+              <div class="preview"></div>
+              <div class="dot g"></div>
+              <div class="badge"></div>
+            </li>
+            <li class="item">
+              <div class="name"></div>
+              <div class="meta"></div>
+              <div class="preview"></div>
+              <div class="dot r"></div>
+            </li>
+            <li class="item">
+              <div class="name"></div>
+              <div class="meta"></div>
+              <div class="preview"></div>
+              <div class="dot y"></div>
+              <div class="badge"></div>
+            </li>
+          </ul>
+        </aside>
+
+        <section class="main">
+          <div class="chat-head">
+            <div class="h-title"></div>
+            <div class="h-tag"></div>
+          </div>
+
+          <div class="members">
+            <div class="m-title"></div>
+            <div class="m-row"></div>
+            <div class="m-row w2"></div>
+            <div class="m-row w3"></div>
+            <div class="add-row">
+              <div class="add-field"></div>
+              <div class="add-role"></div>
+              <div class="add-btn"></div>
+            </div>
+          </div>
+
+          <div class="messages">
+            <div class="bubble">
+              <div class="line"></div>
+              <div class="line w2"></div>
+              <div class="line w3"></div>
+              <div class="reply"></div>
+            </div>
+            <div class="bubble">
+              <div class="line"></div>
+              <div class="line w3"></div>
+              <div class="reply"></div>
+            </div>
+            <div class="bubble self">
+              <div class="line"></div>
+              <div class="line w3"></div>
+            </div>
+            <div class="bubble">
+              <div class="line"></div>
+              <div class="line w3"></div>
+              <div class="reply"></div>
+            </div>
+          </div>
+
+          <div class="composer">
+            <div class="text-area"></div>
+            <div class="actions">
+              <div class="clip"></div>
+              <div class="send"></div>
+            </div>
+          </div>
+        </section>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
