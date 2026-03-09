@@ -1,0 +1,242 @@
+﻿<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Messenger Admin Shapes</title>
+  <script src="https://mcp.figma.com/mcp/html-to-design/capture.js" async></script>
+  <style>
+    :root {
+      --bg: #d0d3d6;
+      --nav: #2a4157;
+      --nav-item: #3a5b77;
+      --primary: #3a97d4;
+      --panel-dark: #2d475f;
+      --card: #f4f6f8;
+      --line: #c8d0d6;
+      --soft: #e8ecef;
+      --grad-a: #3b9ad5;
+      --grad-b: #325579;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: var(--bg);
+      font-family: "Segoe UI", sans-serif;
+      padding: 8px;
+    }
+
+    .screen {
+      width: min(1540px, 100%);
+      min-height: calc(100vh - 16px);
+      margin: 0 auto;
+      border: 1px solid #c1c7cc;
+      background: var(--bg);
+      overflow: hidden;
+    }
+
+    .topbar {
+      height: 66px;
+      background: var(--nav);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 16px;
+    }
+
+    .brand { width: 188px; height: 32px; border-radius: 6px; background: #e7edf1; }
+    .top-controls { display: flex; gap: 10px; align-items: center; }
+    .ctl { height: 30px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.24); background: var(--nav-item); }
+    .c1 { width: 92px; }
+    .c2 { width: 88px; }
+    .c3 { width: 84px; background: #e8ecef; border: none; }
+    .c4 { width: 56px; background: #e8ecef; border: none; }
+    .c5 { width: 54px; }
+    .c6 { width: 50px; }
+
+    .admin {
+      display: grid;
+      grid-template-columns: 290px 1fr;
+      min-height: calc(100vh - 82px);
+      margin-top: 8px;
+    }
+
+    .sidebar {
+      background: var(--panel-dark);
+      border-right: 1px solid #263a50;
+      padding: 14px 0;
+    }
+
+    .side-head {
+      margin: 0 14px 12px;
+      height: 54px;
+      border-radius: 4px;
+      background: #355170;
+    }
+
+    .nav-item {
+      height: 44px;
+      margin: 0;
+      border-bottom: 1px solid rgba(255,255,255,0.04);
+      background: transparent;
+    }
+
+    .nav-item.active {
+      background: var(--primary);
+      border-left: 4px solid #2e7fb5;
+    }
+
+    .main {
+      padding: 16px 18px;
+      display: grid;
+      grid-template-rows: 52px 1fr;
+      gap: 12px;
+    }
+
+    .header {
+      border-bottom: 1px solid var(--line);
+      position: relative;
+    }
+
+    .h-title { width: 170px; height: 34px; border-radius: 6px; background: #2f475f; }
+
+    .content {
+      background: var(--card);
+      border-radius: 8px;
+      border: 1px solid #d8dde1;
+      padding: 20px;
+      display: grid;
+      grid-template-rows: auto 1fr;
+      gap: 18px;
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+    }
+
+    .stat {
+      height: 128px;
+      border-radius: 8px;
+      background: linear-gradient(130deg, var(--grad-a), var(--grad-b));
+      box-shadow: 0 3px 10px rgba(36, 58, 78, 0.2);
+      padding: 14px;
+      position: relative;
+    }
+
+    .stat .n {
+      width: 54px;
+      height: 48px;
+      border-radius: 6px;
+      background: rgba(255,255,255,0.88);
+      margin: 0 auto;
+    }
+
+    .stat .l {
+      width: 126px;
+      height: 16px;
+      border-radius: 4px;
+      background: rgba(255,255,255,0.72);
+      position: absolute;
+      left: 50%;
+      bottom: 18px;
+      transform: translateX(-50%);
+    }
+
+    .activity-wrap {
+      display: grid;
+      grid-template-rows: 30px 1fr;
+      gap: 10px;
+    }
+
+    .activity-title { width: 160px; height: 24px; border-radius: 5px; background: #31485f; }
+
+    .activity {
+      border-radius: 8px;
+      background: #eff2f4;
+      border: 1px solid #e1e6ea;
+      padding: 12px;
+      display: grid;
+      grid-template-rows: repeat(3, 1fr);
+      gap: 8px;
+    }
+
+    .row {
+      border-bottom: 1px solid #d8dee3;
+      display: grid;
+      grid-template-columns: 1.2fr .8fr .7fr;
+      gap: 10px;
+      align-items: center;
+      padding-bottom: 8px;
+    }
+
+    .row:last-child { border-bottom: none; }
+    .cell { height: 14px; border-radius: 4px; background: #b9c2c9; }
+    .cell.c2 { width: 78%; justify-self: center; }
+    .cell.c3 { width: 62%; justify-self: end; }
+
+    @media (max-width: 1100px) {
+      .admin { grid-template-columns: 1fr; }
+      .sidebar { display: none; }
+      .stats { grid-template-columns: repeat(2, 1fr); }
+    }
+
+    @media (max-width: 700px) {
+      .stats { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="screen">
+    <div class="topbar">
+      <div class="brand"></div>
+      <div class="top-controls">
+        <div class="ctl c1"></div>
+        <div class="ctl c2"></div>
+        <div class="ctl c3"></div>
+        <div class="ctl c4"></div>
+        <div class="ctl c5"></div>
+        <div class="ctl c6"></div>
+      </div>
+    </div>
+
+    <div class="admin">
+      <aside class="sidebar">
+        <div class="side-head"></div>
+        <div class="nav-item active"></div>
+        <div class="nav-item"></div>
+        <div class="nav-item"></div>
+        <div class="nav-item"></div>
+        <div class="nav-item"></div>
+        <div class="nav-item"></div>
+        <div class="nav-item"></div>
+      </aside>
+
+      <section class="main">
+        <div class="header"><div class="h-title"></div></div>
+
+        <div class="content">
+          <div class="stats">
+            <div class="stat"><div class="n"></div><div class="l"></div></div>
+            <div class="stat"><div class="n"></div><div class="l"></div></div>
+            <div class="stat"><div class="n"></div><div class="l"></div></div>
+            <div class="stat"><div class="n"></div><div class="l"></div></div>
+          </div>
+
+          <div class="activity-wrap">
+            <div class="activity-title"></div>
+            <div class="activity">
+              <div class="row"><div class="cell"></div><div class="cell c2"></div><div class="cell c3"></div></div>
+              <div class="row"><div class="cell"></div><div class="cell c2"></div><div class="cell c3"></div></div>
+              <div class="row"><div class="cell"></div><div class="cell c2"></div><div class="cell c3"></div></div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+</body>
+</html>

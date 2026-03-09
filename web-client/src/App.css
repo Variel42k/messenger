@@ -96,3 +96,78 @@ nav button.active {
 .unauthorized h2 {
   color: #e74c3c;
 }
+
+.flow-prototype {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-height: 640px;
+  background: linear-gradient(180deg, #f4f7fb 0%, #dde7f1 100%);
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+.flow-node {
+  position: absolute;
+  border-radius: 18px;
+  border: 4px solid #3f5e7c;
+  background: #ffffff;
+  box-shadow: 0 18px 36px rgba(25, 49, 74, 0.15);
+}
+
+.flow-node-login {
+  width: 280px;
+  height: 380px;
+  left: 72px;
+  top: 130px;
+}
+
+.flow-node-chat {
+  width: 520px;
+  height: 430px;
+  left: 470px;
+  top: 100px;
+}
+
+.flow-node-admin {
+  width: 420px;
+  height: 430px;
+  right: 72px;
+  top: 100px;
+}
+
+.flow-svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.flow-link {
+  fill: none;
+  stroke: #2f3f52;
+  stroke-width: 8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* Capture mode for Figma: preserve geometry, hide text labels */
+body.figma-shapes-only,
+body.figma-shapes-only * {
+  color: transparent !important;
+  text-shadow: none !important;
+}
+
+body.figma-shapes-only input,
+body.figma-shapes-only textarea {
+  caret-color: transparent !important;
+}
+
+body.figma-shapes-only input::placeholder,
+body.figma-shapes-only textarea::placeholder,
+body.figma-shapes-only ::-webkit-input-placeholder,
+body.figma-shapes-only ::-moz-placeholder,
+body.figma-shapes-only :-ms-input-placeholder {
+  color: transparent !important;
+}
