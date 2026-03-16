@@ -5,6 +5,8 @@ import ChatWindow from './components/ChatWindow';
 import Login from './components/Login';
 import Help from './components/Help';
 import AdminPanel from './components/AdminPanel';
+import SecuritySettings from './components/SecuritySettings';
+import { clearStoredSession, loadStoredSession, saveStoredSession } from './utils/auth';
 
 const searchParams = new URLSearchParams(window.location.search);
 const mockView = searchParams.get('mockView');
@@ -16,7 +18,12 @@ const isMockView = ['login', 'chat', 'admin', 'help', 'flow'].includes(mockView 
 const shouldMockAuth = mockAuthRaw === '1' || mockAuthRaw === 'true' || (mockView === 'chat' || mockView === 'admin');
 const initialRole = mockRole || (mockView === 'admin' ? 'ADMIN' : 'USER');
 const initialView = mockView === 'login' ? 'chat' : (isMockView ? mockView : 'chat');
-const initialUser = shouldMockAuth ? { username: initialRole === 'ADMIN' ? 'admin' : 'user', role: initialRole } : null;
+const storedSession = shouldMockAuth ? null : loadStoredSession();
+const initialUser = shouldMockAuth
+  ? { username: initialRole === 'ADMIN' ? 'admin' : 'user', role: initialRole }
+  : storedSession?.user || null;
+const initialAccessToken = shouldMockAuth ? null : storedSession?.accessToken || null;
+const initialRefreshToken = shouldMockAuth ? null : storedSession?.refreshToken || null;
 
 function FlowPrototype() {
   return (
@@ -31,16 +38,9 @@ function FlowPrototype() {
           </marker>
         </defs>
 
-        {/* login -> chat */}
         <line x1="360" y1="320" x2="470" y2="320" className="flow-link" markerEnd="url(#flow-arrow-head)" />
-
-        {/* login -> admin */}
         <path d="M 360 210 L 1290 210 L 1290 320 L 1349 320" className="flow-link" markerEnd="url(#flow-arrow-head)" />
-
-        {/* chat -> login */}
         <line x1="470" y1="430" x2="360" y2="430" className="flow-link" markerEnd="url(#flow-arrow-head)" />
-
-        {/* admin -> chat */}
         <line x1="1349" y1="430" x2="998" y2="430" className="flow-link" markerEnd="url(#flow-arrow-head)" />
       </svg>
     </div>
@@ -51,7 +51,9 @@ function App() {
   const { t, i18n } = useTranslation();
   const [isAuthenticated, setIsAuthenticated] = useState(Boolean(initialUser));
   const [currentUser, setCurrentUser] = useState(initialUser);
-  const [currentView, setCurrentView] = useState(initialView); // 'chat', 'help', 'admin'
+  const [accessToken, setAccessToken] = useState(initialAccessToken);
+  const [refreshToken, setRefreshToken] = useState(initialRefreshToken);
+  const [currentView, setCurrentView] = useState(initialView); // 'chat', 'help', 'admin', 'security'
 
   useEffect(() => {
     if (!mockShapesOnly) {
@@ -67,20 +69,35 @@ function App() {
     i18n.changeLanguage(lng);
   };
 
-  // Simulate checking user role after login
   const handleLogin = (userData) => {
     setIsAuthenticated(true);
-    // In a real application, this would come from the authentication response
-    setCurrentUser(userData || { username: 'admin', role: 'ADMIN' });
+    const nextUser = userData?.user || userData || { username: 'admin', role: 'ADMIN' };
+    const nextAccessToken = userData?.accessToken || null;
+    const nextRefreshToken = userData?.refreshToken || null;
+
+    setCurrentUser(nextUser);
+    setAccessToken(nextAccessToken);
+    setRefreshToken(nextRefreshToken);
+    setCurrentView('chat');
+
+    if (!shouldMockAuth) {
+      saveStoredSession({
+        accessToken: nextAccessToken,
+        refreshToken: nextRefreshToken,
+        user: nextUser,
+      });
+    }
   };
 
   const handleLogout = () => {
     setIsAuthenticated(false);
     setCurrentUser(null);
+    setAccessToken(null);
+    setRefreshToken(null);
     setCurrentView('chat');
+    clearStoredSession();
   };
 
-  // Update language options to include new languages
   const languageOptions = [
     { value: 'en', label: 'English' },
     { value: 'ru', label: 'Русский' },
@@ -94,15 +111,15 @@ function App() {
         <h1>{t('app.title')}</h1>
         <div className="header-controls">
           <select onChange={(e) => changeLanguage(e.target.value)} defaultValue="en">
-            {languageOptions.map(lang => (
+            {languageOptions.map((lang) => (
               <option key={lang.value} value={lang.value}>{lang.label}</option>
             ))}
           </select>
-          
+
           {isAuthenticated && (
             <div className="user-controls">
               <span className="username">Hello, {currentUser?.username || 'User'}</span>
-              
+
               {currentUser?.role === 'ADMIN' && (
                 <button
                   className={currentView === 'admin' ? 'active' : ''}
@@ -111,11 +128,18 @@ function App() {
                   {t('adminPanel')}
                 </button>
               )}
-              
+
+              <button
+                className={currentView === 'security' ? 'active' : ''}
+                onClick={() => setCurrentView('security')}
+              >
+                Security
+              </button>
+
               <button onClick={handleLogout}>{t('logout')}</button>
             </div>
           )}
-          
+
           <nav>
             <button
               className={currentView === 'chat' ? 'active' : ''}
@@ -151,6 +175,12 @@ function App() {
               <p>{t('adminAccessDenied') || 'Administrative access is denied.'}</p>
               <button onClick={() => setCurrentView('chat')}>{t('back')}</button>
             </div>
+          )
+        ) : currentView === 'security' ? (
+          isAuthenticated ? (
+            <SecuritySettings accessToken={accessToken} currentUser={currentUser} />
+          ) : (
+            <Login onLogin={handleLogin} />
           )
         ) : (
           <Help />

@@ -31,6 +31,12 @@ public class User {
     @Column(name = "avatar_url")
     private String avatarUrl;
 
+    @Column(name = "two_factor_enabled", nullable = false)
+    private boolean twoFactorEnabled;
+
+    @Column(name = "two_factor_secret")
+    private String twoFactorSecret;
+
     @Enumerated(EnumType.STRING)
     private UserRole role;
 
@@ -56,6 +62,7 @@ public class User {
         this.username = username;
         this.email = email;
         this.passwordHash = passwordHash;
+        this.twoFactorEnabled = false;
         this.role = UserRole.USER;
         this.status = UserStatus.ACTIVE;
         this.createdAt = LocalDateTime.now();
@@ -83,6 +90,12 @@ public class User {
 
     public String getAvatarUrl() { return avatarUrl; }
     public void setAvatarUrl(String avatarUrl) { this.avatarUrl = avatarUrl; }
+
+    public boolean isTwoFactorEnabled() { return twoFactorEnabled; }
+    public void setTwoFactorEnabled(boolean twoFactorEnabled) { this.twoFactorEnabled = twoFactorEnabled; }
+
+    public String getTwoFactorSecret() { return twoFactorSecret; }
+    public void setTwoFactorSecret(String twoFactorSecret) { this.twoFactorSecret = twoFactorSecret; }
 
     public UserRole getRole() { return role; }
     public void setRole(UserRole role) { this.role = role; }
