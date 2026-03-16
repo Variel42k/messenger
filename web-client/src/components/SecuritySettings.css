@@ -1,0 +1,134 @@
+.security-settings {
+  max-width: 720px;
+  margin: 0 auto;
+}
+
+.security-settings-card {
+  background: #ffffff;
+  border-radius: 12px;
+  padding: 1.5rem;
+  box-shadow: 0 8px 24px rgba(44, 62, 80, 0.08);
+}
+
+.security-settings-card h2,
+.security-settings-card h3 {
+  margin-top: 0;
+  color: #243648;
+}
+
+.security-settings-card p,
+.security-settings-card li {
+  color: #425466;
+  line-height: 1.5;
+}
+
+.security-state {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.35rem 0.75rem;
+  border-radius: 999px;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.security-state.enabled {
+  background: #e8f7ee;
+  color: #1f7a3a;
+}
+
+.security-state.pending {
+  background: #fff4de;
+  color: #8b5e13;
+}
+
+.security-state.disabled {
+  background: #f1f5f8;
+  color: #5c6b78;
+}
+
+.security-section {
+  margin-top: 1.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid #e6edf3;
+}
+
+.security-field {
+  margin-bottom: 1rem;
+}
+
+.security-field label {
+  display: block;
+  margin-bottom: 0.5rem;
+  color: #243648;
+  font-weight: 600;
+}
+
+.security-field input,
+.security-field textarea {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid #cfd8e3;
+  border-radius: 8px;
+  box-sizing: border-box;
+  font-family: inherit;
+}
+
+.security-field textarea {
+  min-height: 96px;
+  resize: vertical;
+}
+
+.security-actions {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  margin-top: 1rem;
+}
+
+.security-actions button {
+  padding: 0.75rem 1rem;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.security-actions .primary-action {
+  background: #2f80ed;
+  color: #ffffff;
+}
+
+.security-actions .secondary-action {
+  background: #e6edf3;
+  color: #243648;
+}
+
+.security-actions .danger-action {
+  background: #d64545;
+  color: #ffffff;
+}
+
+.security-help {
+  margin: 0.5rem 0 0;
+  padding-left: 1.25rem;
+}
+
+.security-success {
+  margin-top: 1rem;
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  background: #e8f7ee;
+  color: #1f7a3a;
+}
+
+@media (max-width: 640px) {
+  .security-settings-card {
+    padding: 1rem;
+  }
+
+  .security-actions button {
+    width: 100%;
+  }
+}
