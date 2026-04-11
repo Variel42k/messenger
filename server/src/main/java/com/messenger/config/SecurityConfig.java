@@ -64,7 +64,8 @@ public class SecurityConfig {
                         // Разрешить доступ без аутентификации к маршрутам аутентификации, WebSocket и
                         // эндпоинтам состояния
                         .requestMatchers("/api/auth/register", "/api/auth/login", "/api/auth/login/2fa",
-                                "/api/auth/refresh", "/ws/**", "/actuator/health", "/actuator/info",
+                                "/api/auth/refresh", "/api/auth/oidc/provider", "/api/auth/oidc/authorization-url",
+                                "/api/auth/oidc/exchange", "/ws/**", "/actuator/health", "/actuator/info",
                                 "/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**")
                         .permitAll()
                         // Требовать роль ADMIN для администраторских маршрутов

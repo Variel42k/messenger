@@ -40,6 +40,10 @@ function AdminPanel() {
         return <ChatManagementTab t={t} chats={chats} setChats={setChats} />;
       case 'ldap-settings':
         return <LdapSettingsTab t={t} />;
+      case 'oidc-settings':
+        return <OidcSettingsTab t={t} />;
+      case 'cluster-federation':
+        return <ClusterFederationTab t={t} />;
       case 'security-policies':
         return <SecurityPoliciesTab t={t} />;
       case 'system-settings':
@@ -91,6 +95,18 @@ function AdminPanel() {
               {t('ldapSettings')}
             </li>
             <li
+              className={activeTab === 'oidc-settings' ? 'active' : ''}
+              onClick={() => setActiveTab('oidc-settings')}
+            >
+              OIDC Provider
+            </li>
+            <li
+              className={activeTab === 'cluster-federation' ? 'active' : ''}
+              onClick={() => setActiveTab('cluster-federation')}
+            >
+              Cluster Federation
+            </li>
+            <li
               className={activeTab === 'system-settings' ? 'active' : ''}
               onClick={() => setActiveTab('system-settings')}
             >
@@ -119,6 +135,8 @@ function AdminPanel() {
             {activeTab === 'user-management' && t('userManager')}
             {activeTab === 'chat-management' && t('chatManager')}
             {activeTab === 'ldap-settings' && t('ldapSettings')}
+            {activeTab === 'oidc-settings' && 'OIDC Provider Configuration'}
+            {activeTab === 'cluster-federation' && 'Cluster Federation Control Plane'}
             {activeTab === 'system-settings' && t('systemSettings')}
           </h2>
         </div>
@@ -928,6 +946,610 @@ function LdapSettingsTab({ t }) {
           </button>
         </div>
       </div>
+    </div>
+  );
+}
+
+function OidcSettingsTab() {
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
+  const [settings, setSettings] = useState({
+    providerName: 'default',
+    displayName: 'Enterprise SSO',
+    enabled: false,
+    issuerUri: '',
+    authorizationUri: '',
+    tokenUri: '',
+    userInfoUri: '',
+    jwksUri: '',
+    clientId: '',
+    clientSecret: '',
+    scopes: 'openid profile email',
+    redirectUri: `${window.location.origin}${window.location.pathname}`,
+    autoProvisionUsers: true,
+    defaultRole: 'USER',
+    clientSecretConfigured: false,
+  });
+
+  const loadSettings = async () => {
+    setLoading(true);
+    setError('');
+
+    try {
+      const response = await fetch('/api/admin/oidc/provider');
+      const data = await response.json();
+
+      if (!response.ok) {
+        setError(data.error || 'Unable to load OIDC provider settings.');
+        setLoading(false);
+        return;
+      }
+
+      setSettings((previous) => ({
+        ...previous,
+        ...data,
+        clientSecret: '',
+      }));
+    } catch (requestError) {
+      setError('Failed to load OIDC configuration.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadSettings();
+  }, []);
+
+  const updateField = (key, value) => {
+    setSettings((previous) => ({
+      ...previous,
+      [key]: value,
+    }));
+  };
+
+  const handleSave = async () => {
+    setSaving(true);
+    setError('');
+    setSuccess('');
+
+    try {
+      const response = await fetch('/api/admin/oidc/provider', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(settings),
+      });
+      const data = await response.json();
+
+      if (!response.ok) {
+        setError(data.error || 'Unable to save OIDC provider settings.');
+        return;
+      }
+
+      setSettings((previous) => ({
+        ...previous,
+        ...data,
+        clientSecret: '',
+      }));
+      setSuccess('OIDC provider settings were saved successfully.');
+    } catch (requestError) {
+      setError('Network error while saving OIDC settings.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="oidc-settings-tab">
+      <h3>OpenID Connect Provider</h3>
+      <p className="tab-description">
+        Configure your enterprise identity provider and enable seamless single sign-on for Messenger users.
+      </p>
+
+      {error && <div className="error-message">{error}</div>}
+      {success && <div className="success-message">{success}</div>}
+
+      {loading ? (
+        <p>Loading OIDC settings...</p>
+      ) : (
+        <div className="settings-form">
+          <div className="form-group checkbox-group">
+            <label>
+              <input
+                type="checkbox"
+                checked={settings.enabled}
+                onChange={(event) => updateField('enabled', event.target.checked)}
+              />
+              Enable OIDC authentication
+            </label>
+            <small>When enabled, users can authenticate through your configured OIDC provider.</small>
+          </div>
+
+          <div className="form-group">
+            <label>Provider key</label>
+            <input
+              type="text"
+              value={settings.providerName || ''}
+              onChange={(event) => updateField('providerName', event.target.value)}
+              placeholder="default"
+            />
+          </div>
+
+          <div className="form-group">
+            <label>Display name</label>
+            <input
+              type="text"
+              value={settings.displayName || ''}
+              onChange={(event) => updateField('displayName', event.target.value)}
+              placeholder="Corporate SSO"
+            />
+          </div>
+
+          <div className="form-group">
+            <label>Authorization URL</label>
+            <input
+              type="text"
+              value={settings.authorizationUri || ''}
+              onChange={(event) => updateField('authorizationUri', event.target.value)}
+              placeholder="https://idp.example.com/oauth2/v1/authorize"
+            />
+          </div>
+
+          <div className="form-group">
+            <label>Token URL</label>
+            <input
+              type="text"
+              value={settings.tokenUri || ''}
+              onChange={(event) => updateField('tokenUri', event.target.value)}
+              placeholder="https://idp.example.com/oauth2/v1/token"
+            />
+          </div>
+
+          <div className="form-group">
+            <label>UserInfo URL</label>
+            <input
+              type="text"
+              value={settings.userInfoUri || ''}
+              onChange={(event) => updateField('userInfoUri', event.target.value)}
+              placeholder="https://idp.example.com/oauth2/v1/userinfo"
+            />
+          </div>
+
+          <div className="form-group">
+            <label>Issuer URL</label>
+            <input
+              type="text"
+              value={settings.issuerUri || ''}
+              onChange={(event) => updateField('issuerUri', event.target.value)}
+              placeholder="https://idp.example.com"
+            />
+          </div>
+
+          <div className="form-group">
+            <label>JWKS URL</label>
+            <input
+              type="text"
+              value={settings.jwksUri || ''}
+              onChange={(event) => updateField('jwksUri', event.target.value)}
+              placeholder="https://idp.example.com/oauth2/v1/keys"
+            />
+          </div>
+
+          <div className="form-group">
+            <label>Client ID</label>
+            <input
+              type="text"
+              value={settings.clientId || ''}
+              onChange={(event) => updateField('clientId', event.target.value)}
+              placeholder="messenger-web-client"
+            />
+          </div>
+
+          <div className="form-group">
+            <label>
+              Client Secret
+              {' '}
+              {settings.clientSecretConfigured ? '(already configured, leave blank to keep)' : ''}
+            </label>
+            <input
+              type="password"
+              value={settings.clientSecret || ''}
+              onChange={(event) => updateField('clientSecret', event.target.value)}
+              placeholder="********"
+            />
+          </div>
+
+          <div className="form-group">
+            <label>Scopes</label>
+            <input
+              type="text"
+              value={settings.scopes || ''}
+              onChange={(event) => updateField('scopes', event.target.value)}
+              placeholder="openid profile email"
+            />
+          </div>
+
+          <div className="form-group">
+            <label>Redirect URI</label>
+            <input
+              type="text"
+              value={settings.redirectUri || ''}
+              onChange={(event) => updateField('redirectUri', event.target.value)}
+              placeholder={`${window.location.origin}${window.location.pathname}`}
+            />
+          </div>
+
+          <div className="form-group checkbox-group">
+            <label>
+              <input
+                type="checkbox"
+                checked={settings.autoProvisionUsers}
+                onChange={(event) => updateField('autoProvisionUsers', event.target.checked)}
+              />
+              Auto-provision users
+            </label>
+            <small>Automatically create local Messenger accounts for first-time OIDC users.</small>
+          </div>
+
+          <div className="form-group">
+            <label>Default role for new OIDC users</label>
+            <select
+              value={settings.defaultRole || 'USER'}
+              onChange={(event) => updateField('defaultRole', event.target.value)}
+            >
+              <option value="USER">USER</option>
+              <option value="ADMIN">ADMIN</option>
+            </select>
+          </div>
+
+          <div className="form-actions">
+            <button className="btn btn-success" onClick={handleSave} disabled={saving}>
+              {saving ? 'Saving...' : 'Save OIDC Settings'}
+            </button>
+            <button className="btn btn-secondary" onClick={loadSettings} disabled={saving}>
+              Reload
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ClusterFederationTab() {
+  const [clusters, setClusters] = useState([]);
+  const [federations, setFederations] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
+
+  const [newCluster, setNewCluster] = useState({
+    name: '',
+    apiBaseUrl: '',
+    healthEndpoint: '/actuator/health',
+  });
+
+  const [newFederation, setNewFederation] = useState({
+    name: '',
+    description: '',
+    clusterIds: [],
+  });
+
+  const loadData = async () => {
+    setLoading(true);
+    setError('');
+
+    try {
+      const [clustersResponse, federationsResponse] = await Promise.all([
+        fetch('/api/admin/federation/clusters'),
+        fetch('/api/admin/federation/federations'),
+      ]);
+
+      const clustersData = await clustersResponse.json();
+      const federationsData = await federationsResponse.json();
+
+      if (!clustersResponse.ok) {
+        setError(clustersData.error || 'Unable to load cluster registry.');
+        setLoading(false);
+        return;
+      }
+
+      if (!federationsResponse.ok) {
+        setError(federationsData.error || 'Unable to load federation list.');
+        setLoading(false);
+        return;
+      }
+
+      setClusters(clustersData);
+      setFederations(federationsData);
+    } catch (requestError) {
+      setError('Unable to reach cluster federation API.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  const toggleClusterSelection = (clusterId) => {
+    setNewFederation((previous) => {
+      const alreadySelected = previous.clusterIds.includes(clusterId);
+      return {
+        ...previous,
+        clusterIds: alreadySelected
+          ? previous.clusterIds.filter((id) => id !== clusterId)
+          : [...previous.clusterIds, clusterId],
+      };
+    });
+  };
+
+  const handleAddCluster = async (event) => {
+    event.preventDefault();
+    setSaving(true);
+    setError('');
+    setSuccess('');
+
+    try {
+      const response = await fetch('/api/admin/federation/clusters', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(newCluster),
+      });
+      const data = await response.json();
+
+      if (!response.ok) {
+        setError(data.error || 'Unable to register cluster.');
+        return;
+      }
+
+      setNewCluster({ name: '', apiBaseUrl: '', healthEndpoint: '/actuator/health' });
+      setSuccess('Cluster registered and health-checked successfully.');
+      await loadData();
+    } catch (requestError) {
+      setError('Failed to register cluster.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleRefreshStatuses = async () => {
+    setSaving(true);
+    setError('');
+    setSuccess('');
+
+    try {
+      const response = await fetch('/api/admin/federation/clusters/refresh', {
+        method: 'POST',
+      });
+      const data = await response.json();
+
+      if (!response.ok) {
+        setError(data.error || 'Unable to refresh cluster statuses.');
+        return;
+      }
+
+      setClusters(data);
+      setSuccess('Cluster status refreshed.');
+    } catch (requestError) {
+      setError('Failed to refresh clusters.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleCreateFederation = async (event) => {
+    event.preventDefault();
+    setSaving(true);
+    setError('');
+    setSuccess('');
+
+    try {
+      const response = await fetch('/api/admin/federation/federations', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(newFederation),
+      });
+      const data = await response.json();
+
+      if (!response.ok) {
+        setError(data.error || 'Unable to create federation.');
+        return;
+      }
+
+      setNewFederation({ name: '', description: '', clusterIds: [] });
+      setSuccess('Federation created from running clusters.');
+      await loadData();
+    } catch (requestError) {
+      setError('Failed to create federation.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const runningClusters = clusters.filter((cluster) => cluster.status === 'RUNNING');
+
+  return (
+    <div className="cluster-federation-tab">
+      <h3>Cluster Federation</h3>
+      <p className="tab-description">
+        Register active clusters, verify their health, and create federations strictly from running nodes.
+      </p>
+
+      {error && <div className="error-message">{error}</div>}
+      {success && <div className="success-message">{success}</div>}
+
+      <div className="tab-controls">
+        <button className="btn btn-secondary" onClick={loadData} disabled={saving || loading}>
+          Reload Data
+        </button>
+        <button className="btn btn-primary" onClick={handleRefreshStatuses} disabled={saving || loading}>
+          Refresh Cluster Health
+        </button>
+      </div>
+
+      {loading ? (
+        <p>Loading federation state...</p>
+      ) : (
+        <>
+          <form className="add-chat-form" onSubmit={handleAddCluster}>
+            <h4>Register Cluster</h4>
+            <div className="form-group">
+              <label>Cluster name</label>
+              <input
+                type="text"
+                value={newCluster.name}
+                onChange={(event) => setNewCluster({ ...newCluster, name: event.target.value })}
+                required
+              />
+            </div>
+            <div className="form-group">
+              <label>API base URL</label>
+              <input
+                type="text"
+                value={newCluster.apiBaseUrl}
+                onChange={(event) => setNewCluster({ ...newCluster, apiBaseUrl: event.target.value })}
+                placeholder="http://cluster-1.example.com:8080"
+                required
+              />
+            </div>
+            <div className="form-group">
+              <label>Health endpoint</label>
+              <input
+                type="text"
+                value={newCluster.healthEndpoint}
+                onChange={(event) => setNewCluster({ ...newCluster, healthEndpoint: event.target.value })}
+              />
+            </div>
+            <div className="form-actions">
+              <button type="submit" className="btn btn-success" disabled={saving}>
+                {saving ? 'Registering...' : 'Register Cluster'}
+              </button>
+            </div>
+          </form>
+
+          <div className="users-table-container">
+            <table className="users-table">
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Name</th>
+                  <th>API URL</th>
+                  <th>Status</th>
+                  <th>Last Checked</th>
+                  <th>Last Error</th>
+                </tr>
+              </thead>
+              <tbody>
+                {clusters.map((cluster) => (
+                  <tr key={cluster.id}>
+                    <td>{cluster.id}</td>
+                    <td>{cluster.name}</td>
+                    <td>{cluster.apiBaseUrl}</td>
+                    <td>
+                      <span className={`status-badge ${cluster.status.toLowerCase()}`}>
+                        {cluster.status}
+                      </span>
+                    </td>
+                    <td>{cluster.lastCheckedAt ? new Date(cluster.lastCheckedAt).toLocaleString() : 'never'}</td>
+                    <td>{cluster.lastError || '-'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          <form className="add-chat-form" onSubmit={handleCreateFederation}>
+            <h4>Create Federation (Running Clusters Only)</h4>
+            <div className="form-group">
+              <label>Federation name</label>
+              <input
+                type="text"
+                value={newFederation.name}
+                onChange={(event) => setNewFederation({ ...newFederation, name: event.target.value })}
+                required
+              />
+            </div>
+            <div className="form-group">
+              <label>Description</label>
+              <textarea
+                value={newFederation.description}
+                onChange={(event) => setNewFederation({ ...newFederation, description: event.target.value })}
+              />
+            </div>
+
+            <div className="federation-cluster-picker">
+              {runningClusters.length === 0 ? (
+                <p>No running clusters available. Refresh health checks first.</p>
+              ) : (
+                runningClusters.map((cluster) => (
+                  <label key={cluster.id} className="cluster-chip">
+                    <input
+                      type="checkbox"
+                      checked={newFederation.clusterIds.includes(cluster.id)}
+                      onChange={() => toggleClusterSelection(cluster.id)}
+                    />
+                    <span>{cluster.name}</span>
+                  </label>
+                ))
+              )}
+            </div>
+
+            <div className="form-actions">
+              <button
+                type="submit"
+                className="btn btn-success"
+                disabled={saving || newFederation.clusterIds.length < 2}
+              >
+                {saving ? 'Creating...' : 'Create Federation'}
+              </button>
+            </div>
+          </form>
+
+          <div className="users-table-container">
+            <table className="users-table">
+              <thead>
+                <tr>
+                  <th>Federation</th>
+                  <th>Status</th>
+                  <th>Clusters</th>
+                  <th>Created</th>
+                </tr>
+              </thead>
+              <tbody>
+                {federations.map((federation) => (
+                  <tr key={federation.id}>
+                    <td>
+                      <strong>{federation.name}</strong>
+                      <br />
+                      <small>{federation.description || 'No description'}</small>
+                    </td>
+                    <td>
+                      <span className={`status-badge ${federation.status.toLowerCase()}`}>
+                        {federation.status}
+                      </span>
+                    </td>
+                    <td>
+                      {(federation.clusters || []).map((cluster) => cluster.name).join(', ')}
+                    </td>
+                    <td>{federation.createdAt ? new Date(federation.createdAt).toLocaleString() : '-'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
+      )}
     </div>
   );
 }

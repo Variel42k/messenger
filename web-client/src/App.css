@@ -1,114 +1,178 @@
+﻿@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Sora:wght@600;700&display=swap');
+
+:root {
+  --ink-900: #10263f;
+  --ink-700: #274869;
+  --ink-500: #4f6f91;
+  --surface-0: #f4f8ff;
+  --surface-1: rgba(255, 255, 255, 0.8);
+  --surface-2: #ffffff;
+  --brand-600: #2474cb;
+  --brand-500: #2d89e2;
+  --brand-100: #dceeff;
+  --ok-100: #e3f9ec;
+  --ok-700: #1f7e49;
+  --danger-100: #fde8e8;
+  --danger-700: #a64444;
+  --border: rgba(25, 58, 94, 0.14);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: 'Manrope', 'Segoe UI', sans-serif;
+  color: var(--ink-900);
+  background:
+    radial-gradient(circle at 16% 6%, rgba(70, 169, 255, 0.16) 0%, rgba(244, 248, 255, 0) 30%),
+    radial-gradient(circle at 88% 4%, rgba(255, 188, 110, 0.2) 0%, rgba(244, 248, 255, 0) 28%),
+    linear-gradient(180deg, #f8fbff 0%, #edf3fc 100%);
+}
+
 .app {
-  display: flex;
-  flex-direction: column;
-  height: 100vh;
-  font-family: Arial, sans-serif;
+  min-height: 100%;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  max-width: 1500px;
+  margin: 0 auto;
+  padding: 18px 18px 22px;
+  gap: 14px;
 }
 
 .app-header {
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
+  gap: 12px;
   align-items: center;
-  padding: 1rem;
-  background-color: #2c3e50;
-  color: white;
+  padding: 14px 18px;
+  border-radius: 20px;
+  border: 1px solid var(--border);
+  background:
+    linear-gradient(125deg, rgba(255, 255, 255, 0.94), rgba(255, 255, 255, 0.72)),
+    linear-gradient(135deg, rgba(36, 116, 203, 0.06), rgba(245, 165, 83, 0.08));
+  box-shadow: 0 18px 36px rgba(18, 42, 70, 0.12);
+}
+
+.app-header h1,
+header h1 {
+  margin: 0;
+  font-family: 'Sora', 'Manrope', sans-serif;
+  font-size: clamp(1.3rem, 2.6vw, 1.9rem);
+  color: #0f3258;
+  letter-spacing: 0.01em;
 }
 
 .header-controls {
   display: flex;
   align-items: center;
-  gap: 1rem;
-}
-
-header h1 {
-  margin: 0;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
 }
 
 .header-controls select {
-  padding: 0.5rem;
-  border-radius: 4px;
-  background-color: #34495e;
-  color: white;
-  border: 1px solid #7f8c8d;
+  appearance: none;
+  padding: 9px 30px 9px 11px;
+  border-radius: 10px;
+  border: 1px solid rgba(30, 64, 101, 0.2);
+  color: var(--ink-700);
+  background: var(--surface-2);
+  font-weight: 600;
 }
 
 nav {
   display: flex;
-  gap: 0.5rem;
+  gap: 8px;
 }
 
-nav button {
-  padding: 0.5rem 1rem;
-  background-color: #34495e;
-  color: white;
-  border: none;
-  border-radius: 4px;
+nav button,
+.user-controls button {
+  border: 1px solid rgba(35, 74, 115, 0.14);
+  border-radius: 10px;
+  padding: 8px 12px;
+  background: #ffffff;
+  color: #234466;
+  font-weight: 700;
   cursor: pointer;
+  transition: transform 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
 }
 
-nav button.active {
-  background-color: #3498db;
+nav button:hover,
+.user-controls button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 16px rgba(26, 64, 102, 0.16);
+}
+
+nav button.active,
+.user-controls button.active {
+  background: linear-gradient(135deg, var(--brand-600), var(--brand-500));
+  color: #ffffff;
+  border-color: rgba(31, 103, 176, 0.7);
 }
 
 .user-controls {
   display: flex;
-  gap: 1rem;
   align-items: center;
-}
-
-.user-controls button {
-  padding: 0.5rem 0.85rem;
-  background-color: #34495e;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-}
-
-.user-controls button.active,
-.user-controls button:hover {
-  background-color: #3498db;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 
 .username {
-  font-style: italic;
+  background: var(--brand-100);
+  color: #1b568d;
+  border-radius: 999px;
+  padding: 7px 10px;
+  font-weight: 700;
 }
 
 .app-main {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  padding: 1rem;
-  background-color: #ecf0f1;
+  border: 1px solid var(--border);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.9), rgba(248, 252, 255, 0.82));
+  border-radius: 22px;
+  box-shadow: 0 18px 38px rgba(20, 50, 84, 0.1);
+  padding: 14px;
+  min-height: 0;
+  overflow: auto;
 }
 
 .error-message {
-  color: #e74c3c;
+  color: var(--danger-700);
   margin-bottom: 1rem;
-  padding: 0.5rem;
-  background-color: #fadbd8;
-  border-radius: 4px;
+  padding: 0.7rem 0.8rem;
+  background: var(--danger-100);
+  border-radius: 10px;
+  border: 1px solid #f4caca;
 }
 
 .demo-credentials {
-  margin-top: 1rem;
-  padding-top: 1rem;
-  border-top: 1px solid #ddd;
-  font-size: 0.85em;
-  color: #7f8c8d;
+  margin-top: 0.9rem;
+  padding-top: 0.9rem;
+  border-top: 1px dashed rgba(35, 74, 115, 0.2);
+  font-size: 0.84rem;
+  color: #506981;
 }
 
 .demo-credentials p {
-  margin: 0.25rem 0;
+  margin: 0.2rem 0;
 }
 
 .unauthorized {
   text-align: center;
-  padding: 2rem;
+  padding: 2.2rem;
 }
 
 .unauthorized h2 {
-  color: #e74c3c;
+  color: #c44747;
+  margin-top: 0;
 }
 
 .flow-prototype {
@@ -116,7 +180,10 @@ nav button.active {
   width: 100%;
   height: 100%;
   min-height: 640px;
-  background: linear-gradient(180deg, #f4f7fb 0%, #dde7f1 100%);
+  background:
+    radial-gradient(circle at 20% 16%, rgba(92, 171, 238, 0.34), rgba(92, 171, 238, 0) 32%),
+    radial-gradient(circle at 84% 14%, rgba(255, 183, 116, 0.3), rgba(255, 183, 116, 0) 30%),
+    linear-gradient(180deg, #f3f7fc 0%, #dce7f3 100%);
   border-radius: 16px;
   overflow: hidden;
 }
@@ -166,7 +233,6 @@ nav button.active {
   stroke-linejoin: round;
 }
 
-/* Capture mode for Figma: preserve geometry, hide text labels */
 body.figma-shapes-only,
 body.figma-shapes-only * {
   color: transparent !important;
@@ -184,4 +250,36 @@ body.figma-shapes-only ::-webkit-input-placeholder,
 body.figma-shapes-only ::-moz-placeholder,
 body.figma-shapes-only :-ms-input-placeholder {
   color: transparent !important;
+}
+
+@media (max-width: 900px) {
+  .app {
+    padding: 12px;
+  }
+
+  .header-controls {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .app-main {
+    padding: 10px;
+  }
+}
+
+@media (max-width: 640px) {
+  nav,
+  .user-controls {
+    width: 100%;
+  }
+
+  nav {
+    flex-wrap: wrap;
+  }
+
+  nav button,
+  .user-controls button {
+    flex: 1;
+    min-width: 120px;
+  }
 }

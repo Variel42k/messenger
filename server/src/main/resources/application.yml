@@ -63,6 +63,8 @@ app:
     user-dn-pattern: ${LDAP_USER_DN_PATTERN:#{null}}
     manager-dn: ${LDAP_MANAGER_DN:#{null}}
     manager-password: ${LDAP_MANAGER_PASSWORD:#{null}}
+  oidc:
+    state-ttl-seconds: ${OIDC_STATE_TTL_SECONDS:600}
 
 logging:
   level:
