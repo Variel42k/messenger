@@ -1,133 +1,174 @@
-# Инструкции по тестированию Messenger
+# Инструкции по тестированию Messenger (основной сценарий с локальным S3)
 
-## Подготовка
+Документ описывает проверку работоспособности Messenger в локальном окружении с **LocalStack S3**.
 
-### Требования
-- Docker & Docker Compose (основной способ)
-- Java 17 + Maven 3.8+ (для локальной разработки)
+## 1. Что проверяем
 
-## Запуск с Docker (рекомендуемый)
+- запуск всех сервисов через Docker Compose
+- доступность backend, Swagger и web-клиента
+- базовые API-сценарии:
+  - регистрация
+  - вход
+  - создание чата
+  - отправка и чтение сообщений
+  - загрузка/скачивание файла
+- факт сохранения файла в локальном S3 (LocalStack)
 
-```bash
-cd messenger
+## 2. Предварительные требования
 
-# Запуск всех сервисов
-docker-compose up -d --build
+- Docker + Docker Compose
+- PowerShell 5.1+ (для скрипта ниже)
 
-# Проверка запуска
-docker-compose ps
-docker logs messenger-server --tail 30
+Проверка:
 
-# Ожидание строки "Started MessengerApplication in X seconds"
+```powershell
+docker version
+docker compose version
 ```
 
-Сервисы после запуска:
-- API: http://localhost:8080
-- Swagger UI: http://localhost:8080/swagger-ui/index.html
-- Web-client: http://localhost:3001
-- MinIO Console: http://localhost:9001
+## 3. Подготовка окружения
 
-## Тестирование API (curl)
+В корне репозитория выполните:
 
-### 1. Регистрация
-```bash
-curl -X POST http://localhost:8080/api/auth/register \
-  -H "Content-Type: application/json" \
-  -d '{"username":"testuser","email":"test@example.com","password":"Strong1!"}'
+```powershell
+docker compose up -d --build
+docker compose ps
 ```
 
-### 2. Вход
-```bash
-curl -X POST http://localhost:8080/api/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{"username":"testuser","password":"Strong1!"}'
-# → {"accessToken":"...", "refreshToken":"...", "tokenType":"Bearer"}
+Убедитесь, что сервисы запущены:
+
+- `messenger-postgres`
+- `messenger-redis`
+- `messenger-localstack`
+- `messenger-server`
+- `messenger-web-client`
+
+И что у LocalStack статус `healthy`.
+
+## 4. Проверка доступности endpoint’ов
+
+```powershell
+curl.exe -sS -o NUL -w "%{http_code}`n" http://localhost:8080/actuator/health
+curl.exe -sS -o NUL -w "%{http_code}`n" http://localhost:8080/swagger-ui/index.html
+curl.exe -sS -o NUL -w "%{http_code}`n" http://localhost:3001
 ```
 
-### 3. Создание чата (userId из JWT)
-```bash
-TOKEN="<accessToken из шага 2>"
+Ожидается `200` для всех трёх URL.
 
-curl -X POST http://localhost:8080/api/chats \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{"name":"Test Chat","type":"GROUP"}'
+## 5. Smoke-тест API + проверка Local S3
+
+Запустите в PowerShell:
+
+```powershell
+$ErrorActionPreference='Stop'
+$base='http://localhost:8080'
+$ts=Get-Date -Format 'yyyyMMddHHmmss'
+$username="smoke_$ts"
+$email="$username@example.com"
+$password='StrongPass123'
+
+$regBody = @{ username=$username; email=$email; password=$password } | ConvertTo-Json
+Invoke-RestMethod -Method Post -Uri "$base/api/auth/register" -ContentType 'application/json' -Body $regBody | Out-Null
+
+$loginBody = @{ username=$username; password=$password } | ConvertTo-Json
+$login = Invoke-RestMethod -Method Post -Uri "$base/api/auth/login" -ContentType 'application/json' -Body $loginBody
+$token = $login.accessToken
+if(-not $token){ throw 'No access token from login' }
+$headers=@{ Authorization = "Bearer $token" }
+
+$chatBody = @{ name = "Smoke Chat $ts"; type = 'GROUP' } | ConvertTo-Json
+$chat = Invoke-RestMethod -Method Post -Uri "$base/api/chats" -Headers $headers -ContentType 'application/json' -Body $chatBody
+$chatId = $chat.id
+if(-not $chatId){ throw 'Chat was not created' }
+
+$message = Invoke-RestMethod -Method Post -Uri "$base/api/messages/create?chatId=$chatId&content=hello-smoke-$ts" -Headers $headers
+if(-not $message.id){ throw 'Message was not created' }
+
+Invoke-RestMethod -Method Get -Uri "$base/api/messages/chat/$chatId" -Headers $headers | Out-Null
+
+$tempFile = Join-Path $env:TEMP "smoke-$ts.txt"
+"smoke-file-$ts" | Set-Content -Path $tempFile -Encoding UTF8
+
+$uploadTmp = New-TemporaryFile
+try {
+  $uploadStatus = & curl.exe -sS -o $uploadTmp.FullName -w '%{http_code}' -X POST -H "Authorization: Bearer $token" -F "file=@$tempFile;type=text/plain" "$base/api/files/upload?chatId=$chatId"
+  $uploadBody = Get-Content -Path $uploadTmp.FullName -Raw
+} finally {
+  Remove-Item -Path $uploadTmp.FullName -Force -ErrorAction SilentlyContinue
+}
+if([int]$uploadStatus -ne 200){ throw "Upload failed: HTTP $uploadStatus BODY $uploadBody" }
+$upload = $uploadBody | ConvertFrom-Json
+$fileId = $upload.fileId
+if(-not $fileId){ throw 'No fileId in upload response' }
+
+$downloadPath = Join-Path $env:TEMP "smoke-down-$ts.txt"
+$downloadStatus = & curl.exe -sS -o $downloadPath -w '%{http_code}' -H "Authorization: Bearer $token" "$base/api/files/$fileId"
+if([int]$downloadStatus -ne 200){ throw "Download failed: HTTP $downloadStatus" }
+$downloadText = Get-Content -Path $downloadPath -Raw
+if($downloadText -notmatch "smoke-file-$ts"){ throw 'Downloaded file content mismatch' }
+
+$s3Keys = docker exec messenger-localstack awslocal s3api list-objects-v2 --bucket messenger-files --query "Contents[].Key" --output json
+if(-not $s3Keys){ throw 'Unable to read objects from LocalStack S3' }
+
+Write-Host "Smoke test passed."
+Write-Host "chatId=$chatId messageId=$($message.id) fileId=$fileId"
+Write-Host "S3 keys: $s3Keys"
 ```
 
-### 4. Получение чатов (userId из JWT)
-```bash
-curl -X GET http://localhost:8080/api/chats \
-  -H "Authorization: Bearer $TOKEN"
+Ожидаемый результат:
+
+- скрипт завершается без ошибок
+- получены `chatId`, `messageId`, `fileId`
+- в `S3 keys` присутствует хотя бы один ключ объекта
+
+## 6. Негативные проверки (рекомендуются)
+
+### 6.1 Доступ без токена
+
+```powershell
+curl.exe -sS -o NUL -w "%{http_code}`n" http://localhost:8080/api/chats
 ```
 
-### 5. Отправка сообщения (senderId из JWT)
-```bash
-curl -X POST "http://localhost:8080/api/messages/create?chatId=1&content=Hello" \
-  -H "Authorization: Bearer $TOKEN"
+Ожидается: `401` или `403`.
+
+### 6.2 Ошибка валидации регистрации
+
+```powershell
+curl.exe -sS -X POST http://localhost:8080/api/auth/register `
+  -H "Content-Type: application/json" `
+  -d "{`"username`":`"x`",`"email`":`"bad`",`"password`":`"1`"}"
 ```
 
-### 6. Получение сообщений
-```bash
-curl -X GET http://localhost:8080/api/messages/chat/1 \
-  -H "Authorization: Bearer $TOKEN"
+Ожидается: `400`.
+
+## 7. Диагностика при сбоях
+
+```powershell
+docker compose ps
+docker logs messenger-server --tail 200
+docker logs messenger-localstack --tail 200
+docker logs messenger-postgres --tail 100
+docker logs messenger-redis --tail 100
 ```
 
-### 7. Обновление токена
-```bash
-curl -X POST http://localhost:8080/api/auth/refresh \
-  -H "Content-Type: application/json" \
-  -d '{"refreshToken":"<refreshToken из шага 2>"}'
+Что проверять в первую очередь:
+
+- есть ли `Started MessengerApplication` в логе backend
+- healthy ли LocalStack
+- корректен ли `S3_ENDPOINT`:
+  - `http://localstack:4566` для контейнера backend
+  - `http://localhost:4566` при запуске backend с хоста
+
+## 8. Остановка и очистка
+
+Остановить без удаления данных:
+
+```powershell
+docker compose down
 ```
 
-### 8. Валидация (ожидается 400)
-```bash
-curl -X POST http://localhost:8080/api/auth/register \
-  -H "Content-Type: application/json" \
-  -d '{"username":"x","email":"bad","password":"1"}'
-# → 400 {"errors":{"username":"...","email":"...","password":"..."},"message":"Validation failed"}
-```
+Полная очистка (включая volumes):
 
-## Тестирование функциональности
-
-### Аутентификация
-1. Зарегистрировать пользователя → ожидать 200
-2. Войти → получить access+refresh токены
-3. Отправить запрос с невалидными данными → ожидать 400
-4. Войти с неверным паролем → ожидать 401
-
-### Чаты
-1. Создать чат → проверить id, name в ответе
-2. Получить чаты → проверить список (userId из JWT, не из параметра)
-3. Добавить/удалить участника
-
-### Сообщения
-1. Отправить сообщение → проверить id, content
-2. Получить сообщения чата → проверить список
-
-### Безопасность
-1. Запрос без токена на защищённый endpoint → 401/403
-2. Swagger UI без токена → 200 (открытый)
-3. Невалидный JWT → 401
-
-## Логи
-
-```bash
-# Логи сервера
-docker logs messenger-server -f
-
-# Логи БД
-docker logs messenger-postgres --tail 20
-
-# Все логи
-docker-compose logs -f
-```
-
-## Остановка
-
-```bash
-# Остановка без удаления данных
-docker-compose down
-
-# Полная очистка (с удалением данных)
-docker-compose down -v
+```powershell
+docker compose down -v
 ```

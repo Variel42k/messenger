@@ -1,64 +1,88 @@
-# Отчёт о тестировании Messenger
+# Отчёт о проверке работоспособности Messenger
 
-## Дата последнего тестирования: 2026-02-27
+- Дата проверки: **2026-04-12**
+- Режим развёртывания: **Docker Compose + LocalStack (локальный S3)**
+- Репозиторий: `messenger`
 
-## Состояние проекта
+## 1. Окружение проверки
 
-### Успешно проверено:
-1. **Структура проекта** — серверная часть, веб-клиент (React), десктоп-клиент (JavaFX)
-2. **Backend** — Spring Boot 3.x (Spring MVC), JWT-аутентификация, WebSocket/STOMP
-3. **Архитектура** — PostgreSQL + Redis + MinIO, Docker Compose
-4. **Безопасность** — IDOR-защита, Path Traversal, валидация DTO, GlobalExceptionHandler
-5. **Docker** — все 5 контейнеров запускаются и работают стабильно
+- Docker Engine: `27.0.3`
+- Docker Compose: `v2.28.1-desktop.1`
+- Запущенные сервисы:
+  - `messenger-postgres`
+  - `messenger-redis`
+  - `messenger-localstack` (status: healthy)
+  - `messenger-server`
+  - `messenger-web-client`
 
-### Результаты API-тестирования: 11/11 ✅
+## 2. Результаты автоматизированных тестов backend
 
-| # | Тест | Результат |
-|---|------|-----------|
-| 1 | Health Check (Actuator) | ✅ (DOWN при холодном старте Redis — нормально) |
-| 2 | Register | ✅ 200 |
-| 3 | Login | ✅ 200 (access + refresh) |
-| 4 | Admin Login | ✅ 200 |
-| 5 | Create Chat (userId из JWT) | ✅ 200 |
-| 6 | Get Chats (userId из JWT) | ✅ 200 |
-| 7 | Send Message (senderId из JWT) | ✅ 200 |
-| 8 | Get Messages (/chat/{chatId}) | ✅ 200 |
-| 9 | Refresh Token | ✅ 200 |
-| 10 | Swagger UI (без auth) | ✅ 200 |
-| 11 | Validation (невалидные данные) | ✅ 400 |
+Команда:
 
-## Конфигурация Docker Compose
+```powershell
+cd server
+.\mvnw.cmd test
+```
 
-### Запущенные сервисы:
-- **messenger-postgres** — PostgreSQL 15
-- **messenger-redis** — Redis 7-alpine
-- **messenger-minio** — MinIO (S3-совместимое хранилище)
-- **messenger-server** — Spring Boot API (порт 8080)
-- **messenger-web-client** — React SPA через Nginx (порт 3001)
+Результат:
 
-## Проверка готовности
+- `BUILD SUCCESS`
+- тестов выполнено: **18**
+- падений: **0**
+- ошибок: **0**
 
-### Сервер:
-- [x] REST-контроллеры с DTO-валидацией
-- [x] WebSocket/STOMP конфигурация
-- [x] JWT Security (access + refresh)
-- [x] IDOR-защита (userId из JWT)
-- [x] Path Traversal защита
-- [x] GlobalExceptionHandler (400 для @Valid)
-- [x] @Transactional на сервисах
-- [x] SLF4J логирование
-- [x] Constructor injection
-- [x] Flyway миграции (V1–V6), ddl-auto: validate
-- [x] Swagger UI доступен без аутентификации
+## 3. Результаты интеграционного smoke-теста
 
-### Веб-клиент:
-- [x] React SPA работает на порту 3001
-- [x] Мультиязычность (EN, RU, ES)
+Проверки выполнялись на поднятом `docker compose` окружении.
 
-### Десктоп-клиент:
-- [x] JavaFX-приложение собирается
-- [x] Требует Java 17
+### 3.1 Доступность сервисов
 
-## Выводы
+- `GET http://localhost:8080/actuator/health` -> `200`
+- `GET http://localhost:8080/swagger-ui/index.html` -> `200`
+- `GET http://localhost:3001` -> `200`
 
-Проект полностью работоспособен в Docker-окружении. Все 11 API-тестов пройдены. Безопасность усилена (IDOR, Path Traversal, валидация, CORS). Инфраструктура (PostgreSQL, Redis, MinIO) стабильна.
+### 3.2 Базовые API-сценарии
+
+Проверено успешно:
+
+1. Регистрация пользователя (`/api/auth/register`)
+2. Логин и получение access token (`/api/auth/login`)
+3. Создание чата (`/api/chats`)
+4. Отправка сообщения (`/api/messages/create`)
+5. Получение сообщений чата (`/api/messages/chat/{chatId}`)
+6. Загрузка файла (`/api/files/upload`)
+7. Скачивание файла (`/api/files/{fileId}`)
+
+Фактические идентификаторы прогона:
+
+- `chatId=1`
+- `messageId=1`
+- `fileId=1`
+
+### 3.3 Проверка локального S3 (LocalStack)
+
+Команда:
+
+```powershell
+docker exec messenger-localstack awslocal s3api list-objects-v2 --bucket messenger-files --query "Contents[].Key" --output json
+```
+
+Результат: в бакете обнаружен загруженный объект, например:
+
+```json
+[
+  "ab1a76a4-e118-489f-a50c-b2093cc177e4.txt"
+]
+```
+
+Это подтверждает, что upload действительно работает через локальное S3-хранилище.
+
+## 4. Итог
+
+Текущая версия Messenger **работоспособна** в основном сценарии развёртывания:
+
+- backend и web-клиент доступны
+- ключевые API-функции работают
+- файловые операции корректно интегрированы с **LocalStack S3**
+
+Рекомендация: использовать `docs/TESTING_INSTRUCTIONS.md` как основной пошаговый регламент регрессионной проверки после изменений backend/storage.
