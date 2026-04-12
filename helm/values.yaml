@@ -103,18 +103,21 @@ redis:
       enabled: true
       size: 8Gi
 
-# Конфигурация MinIO
-minio:
+# Конфигурация S3-совместимого хранилища
+objectStorage:
   enabled: true
-  auth:
-    rootUser: "minioadmin"
-    rootPassword: "minioadmin"
-  persistence:
-    enabled: true
-    size: 10Gi
+  endpoint: "http://messenger-localstack:4566"
+  accessKey: "test"
+  secretKey: "test"
+  bucketName: "messenger-files"
+  region: "us-east-1"
+  pathStyleAccessEnabled: "true"
+  autoCreateBucket: "true"
 
 # Переменные окружения для сервера
 env:
+  STORAGE_PROVIDER: "s3"
+  STORAGE_DISK_PATH: "/data/uploads"
   DB_HOST: "messenger-postgresql"
   DB_PORT: "5432"
   DB_NAME: "messenger"
@@ -122,10 +125,13 @@ env:
   DB_PASSWORD: "password"
   REDIS_HOST: "messenger-redis-master"
   REDIS_PORT: "6379"
-  S3_ENDPOINT: "http://messenger-minio:9000"
-  S3_ACCESS_KEY: "minioadmin"
-  S3_SECRET_KEY: "minioadmin"
+  S3_ENDPOINT: "http://messenger-localstack:4566"
+  S3_ACCESS_KEY: "test"
+  S3_SECRET_KEY: "test"
   S3_BUCKET_NAME: "messenger-files"
+  S3_REGION: "us-east-1"
+  S3_PATH_STYLE_ACCESS_ENABLED: "true"
+  S3_AUTO_CREATE_BUCKET: "true"
   JWT_SECRET: "mySecretKeyForDevelopmentOnly"
   JWT_ACCESS_TOKEN_EXPIRATION: "900000"
   JWT_REFRESH_TOKEN_EXPIRATION: "604800000"

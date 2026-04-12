@@ -17,7 +17,9 @@
         <java.version>17</java.version>
         <spring-security.version>6.2.0</spring-security.version>
         <jjwt.version>0.11.5</jjwt.version>
-        <minio.version>8.5.7</minio.version>
+        <mockito.version>5.23.0</mockito.version>
+        <byte-buddy.version>1.18.8</byte-buddy.version>
+        <aws.sdk.version>2.25.55</aws.sdk.version>
         <postgresql.version>42.6.0</postgresql.version>
         <flyway.version>9.22.3</flyway.version>
     </properties>
@@ -101,11 +103,11 @@
             <version>${flyway.version}</version>
         </dependency>
 
-        <!-- S3 Compatible Storage -->
+        <!-- S3 Storage -->
         <dependency>
-            <groupId>io.minio</groupId>
-            <artifactId>minio</artifactId>
-            <version>${minio.version}</version>
+            <groupId>software.amazon.awssdk</groupId>
+            <artifactId>s3</artifactId>
+            <version>${aws.sdk.version}</version>
         </dependency>
 
         <!-- Additional -->

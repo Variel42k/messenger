@@ -1,0 +1,14 @@
+# Example override for Linux host-mounted disk storage.
+# Usage:
+#   cp docker-compose.override.yml.example docker-compose.override.yml
+#   sudo mkdir -p /mnt/messenger/uploads
+#   sudo chown -R 1000:1000 /mnt/messenger/uploads
+#   docker compose up -d --build
+
+services:
+  server:
+    environment:
+      STORAGE_PROVIDER: disk
+      STORAGE_DISK_PATH: /data/uploads-host
+    volumes:
+      - /mnt/messenger/uploads:/data/uploads-host

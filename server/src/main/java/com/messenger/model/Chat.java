@@ -25,6 +25,7 @@ public class Chat {
     private Boolean encrypted = false;
 
     @Column(name = "encryption_key")
+    @JsonIgnore
     private String encryptionKey;
 
     @Column(name = "encryption_algorithm")

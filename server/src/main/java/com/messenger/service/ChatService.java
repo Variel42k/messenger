@@ -9,6 +9,7 @@ import com.messenger.repository.UserChatRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -144,6 +145,22 @@ public class ChatService {
 
     public Optional<Chat> getChatById(Long chatId) {
         return chatRepository.findById(chatId);
+    }
+
+    @Transactional(readOnly = true)
+    public boolean isUserMember(Long chatId, Long userId) {
+        return userChatRepository.existsByChatIdAndUserId(chatId, userId);
+    }
+
+    @Transactional(readOnly = true)
+    public boolean userHasAnyRole(Long chatId, Long userId, ChatRole... roles) {
+        Optional<UserChat> membership = userChatRepository.findByChatIdAndUserId(chatId, userId);
+        if (membership.isEmpty()) {
+            return false;
+        }
+
+        ChatRole currentRole = membership.get().getRole();
+        return Arrays.asList(roles).contains(currentRole);
     }
 
     public String encryptMessage(String message, String encryptionKey) {

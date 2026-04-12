@@ -2,6 +2,7 @@ package com.messenger.security;
 
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.Keys;
+import jakarta.annotation.PostConstruct;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Component;
@@ -29,6 +30,18 @@ public class JwtTokenProvider {
 
     @Value("${jwt.two-factor-token-expiration:300000}")
     private Long twoFactorTokenExpiration;
+
+    @PostConstruct
+    public void validateConfiguration() {
+        if (jwtSecret == null || jwtSecret.isBlank()) {
+            throw new IllegalStateException("JWT secret must not be empty");
+        }
+
+        int secretLength = jwtSecret.getBytes(StandardCharsets.UTF_8).length;
+        if (secretLength < 32) {
+            throw new IllegalStateException("JWT secret must be at least 32 bytes for HS256");
+        }
+    }
 
     public String generateAccessToken(Authentication authentication) {
         return buildToken(authentication.getName(), accessTokenExpiration, ACCESS_TOKEN_TYPE);

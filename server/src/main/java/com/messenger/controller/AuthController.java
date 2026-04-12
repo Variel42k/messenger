@@ -60,7 +60,8 @@ public class AuthController {
     @PostMapping("/register")
     public ResponseEntity<Map<String, String>> register(@Valid @RequestBody UserRegistrationRequest request) {
         User existingUser = userService.findByUsernameOrEmail(request.getUsername());
-        if (existingUser != null) {
+        User existingByEmail = userService.findByEmail(request.getEmail());
+        if (existingUser != null || existingByEmail != null) {
             return ResponseEntity.status(HttpStatus.CONFLICT)
                     .body(Map.of("error", "User already exists"));
         }

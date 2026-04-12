@@ -4,12 +4,15 @@ import com.messenger.model.File;
 import com.messenger.model.Message;
 import com.messenger.model.MessageFile;
 import com.messenger.model.User;
+import com.messenger.model.enums.UserRole;
 import com.messenger.repository.MessageFileRepository;
+import com.messenger.service.ChatService;
 import com.messenger.service.FileService;
 import com.messenger.service.MessageService;
 import com.messenger.service.UserService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -28,13 +31,15 @@ public class MessageController {
     private static final Logger logger = LoggerFactory.getLogger(MessageController.class);
 
     private final MessageService messageService;
+    private final ChatService chatService;
     private final FileService fileService;
     private final MessageFileRepository messageFileRepository;
     private final UserService userService;
 
-    public MessageController(MessageService messageService, FileService fileService,
+    public MessageController(MessageService messageService, ChatService chatService, FileService fileService,
             MessageFileRepository messageFileRepository, UserService userService) {
         this.messageService = messageService;
+        this.chatService = chatService;
         this.fileService = fileService;
         this.messageFileRepository = messageFileRepository;
         this.userService = userService;
@@ -43,17 +48,33 @@ public class MessageController {
     /**
      * Helper to get current user's ID from JWT
      */
-    private Long getCurrentUserId(UserDetails userDetails) {
-        User user = userService.findByUsernameOrEmail(userDetails.getUsername());
-        return user != null ? user.getId() : null;
+    private User getCurrentUser(UserDetails userDetails) {
+        if (userDetails == null) {
+            return null;
+        }
+        return userService.findByUsernameOrEmail(userDetails.getUsername());
+    }
+
+    private boolean isAdmin(User user) {
+        return user != null && user.getRole() == UserRole.ADMIN;
     }
 
     /**
      * Get messages for a chat
      */
     @GetMapping("/chat/{chatId}")
-    public List<Message> getChatMessages(@PathVariable Long chatId) {
-        return messageService.getChatMessages(chatId);
+    public ResponseEntity<List<Message>> getChatMessages(@PathVariable Long chatId,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        User currentUser = getCurrentUser(userDetails);
+        if (currentUser == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+
+        if (!isAdmin(currentUser) && !chatService.isUserMember(chatId, currentUser.getId())) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
+
+        return ResponseEntity.ok(messageService.getChatMessages(chatId));
     }
 
     /**
@@ -67,9 +88,21 @@ public class MessageController {
             @AuthenticationPrincipal UserDetails userDetails,
             @RequestParam(value = "senderId", required = false) Long senderId) {
         try {
-            Long resolvedSenderId = senderId != null ? senderId : getCurrentUserId(userDetails);
-            if (resolvedSenderId == null) {
-                return ResponseEntity.badRequest().build();
+            User currentUser = getCurrentUser(userDetails);
+            if (currentUser == null) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+            }
+
+            Long resolvedSenderId = currentUser.getId();
+            if (senderId != null && !senderId.equals(currentUser.getId())) {
+                if (!isAdmin(currentUser)) {
+                    return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+                }
+                resolvedSenderId = senderId;
+            }
+
+            if (!chatService.isUserMember(chatId, resolvedSenderId)) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
             }
 
             File attachedFile = null;
@@ -104,10 +137,23 @@ public class MessageController {
             @AuthenticationPrincipal UserDetails userDetails,
             @RequestParam(value = "senderId", required = false) Long senderId) {
         try {
-            Long resolvedSenderId = senderId != null ? senderId : getCurrentUserId(userDetails);
-            if (resolvedSenderId == null) {
-                return ResponseEntity.badRequest().build();
+            User currentUser = getCurrentUser(userDetails);
+            if (currentUser == null) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
             }
+
+            Long resolvedSenderId = currentUser.getId();
+            if (senderId != null && !senderId.equals(currentUser.getId())) {
+                if (!isAdmin(currentUser)) {
+                    return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+                }
+                resolvedSenderId = senderId;
+            }
+
+            if (!chatService.isUserMember(chatId, resolvedSenderId)) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+            }
+
             Message message = messageService.createMessage(chatId, resolvedSenderId, content);
             return ResponseEntity.ok(message);
         } catch (Exception e) {

@@ -111,6 +111,9 @@ public class MessageService {
         if (chat == null) {
             throw new IllegalArgumentException("Chat not found with id: " + chatId);
         }
+        if (!chatService.isUserMember(chatId, senderId)) {
+            throw new IllegalStateException("Sender is not a member of this chat");
+        }
 
         // Создаем сообщение
         Message message = new Message();

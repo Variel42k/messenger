@@ -1,7 +1,6 @@
 package com.messenger.config;
 
 import com.messenger.security.JwtAuthenticationFilter;
-import com.messenger.security.JwtTokenProvider;
 import com.messenger.service.UserService;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -22,6 +21,7 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * Конфигурация безопасности для мессенджера
@@ -32,14 +32,12 @@ import java.util.List;
 public class SecurityConfig {
 
     private final UserService userDetailsService;
-    private final JwtTokenProvider jwtTokenProvider;
 
     @Value("${cors.allowed-origins:http://localhost:3000,http://localhost:3001,http://localhost:8080}")
     private String allowedOrigins;
 
-    public SecurityConfig(UserService userDetailsService, JwtTokenProvider jwtTokenProvider) {
+    public SecurityConfig(UserService userDetailsService) {
         this.userDetailsService = userDetailsService;
-        this.jwtTokenProvider = jwtTokenProvider;
     }
 
     /**
@@ -122,11 +120,16 @@ public class SecurityConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
         // Use origins from application.yml
-        configuration.setAllowedOriginPatterns(Arrays.asList(allowedOrigins.split(",")));
+        List<String> normalizedOrigins = Arrays.stream(allowedOrigins.split(","))
+                .map(String::trim)
+                .filter(origin -> !origin.isEmpty())
+                .collect(Collectors.toList());
+        configuration.setAllowedOriginPatterns(normalizedOrigins);
         // Разрешить основные HTTP методы
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         // Разрешить все заголовки
         configuration.setAllowedHeaders(List.of("*"));
+        configuration.setExposedHeaders(List.of("Authorization", "Content-Disposition"));
         // Разрешить передачу учетных данных
         configuration.setAllowCredentials(true);
 

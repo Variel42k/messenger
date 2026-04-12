@@ -12,5 +12,6 @@ public interface UserChatRepository extends JpaRepository<UserChat, Long> {
     List<UserChat> findByUserId(Long userId);
     List<UserChat> findByChatId(Long chatId);
     Optional<UserChat> findByChatIdAndUserId(Long chatId, Long userId);
+    boolean existsByChatIdAndUserId(Long chatId, Long userId);
     List<UserChat> findByChatIdAndRole(Long chatId, ChatRole role);
 }

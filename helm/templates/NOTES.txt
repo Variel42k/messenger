@@ -28,7 +28,7 @@
 kubectl get pods --namespace {{ .Release.Namespace }}
 kubectl get svc --namespace {{ .Release.Namespace }}
 
-3. Для доступа к PostgreSQL, Redis и MinIO используйте следующие команды:
+3. Для доступа к PostgreSQL и Redis используйте следующие команды:
 
 # PostgreSQL
 kubectl port-forward --namespace {{ .Release.Namespace }} svc/{{ include "messenger.fullname" . }}-postgresql 5432:5432
@@ -36,5 +36,4 @@ kubectl port-forward --namespace {{ .Release.Namespace }} svc/{{ include "messen
 # Redis
 kubectl port-forward --namespace {{ .Release.Namespace }} svc/{{ include "messenger.fullname" . }}-redis-master 6379:6379
 
-# MinIO
-kubectl port-forward --namespace {{ .Release.Namespace }} svc/{{ include "messenger.fullname" . }}-minio 9000:9000
+# S3-совместимое хранилище подключается через внешний endpoint (S3_ENDPOINT)

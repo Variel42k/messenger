@@ -50,6 +50,10 @@ spec:
             initialDelaySeconds: 10
             periodSeconds: 5
           env:
+            - name: STORAGE_PROVIDER
+              value: {{ .Values.env.STORAGE_PROVIDER }}
+            - name: STORAGE_DISK_PATH
+              value: {{ .Values.env.STORAGE_DISK_PATH }}
             - name: DB_HOST
               value: {{ .Values.env.DB_HOST }}
             - name: DB_PORT
@@ -72,6 +76,12 @@ spec:
               value: {{ .Values.env.S3_SECRET_KEY }}
             - name: S3_BUCKET_NAME
               value: {{ .Values.env.S3_BUCKET_NAME }}
+            - name: S3_REGION
+              value: {{ .Values.env.S3_REGION }}
+            - name: S3_PATH_STYLE_ACCESS_ENABLED
+              value: {{ .Values.env.S3_PATH_STYLE_ACCESS_ENABLED | quote }}
+            - name: S3_AUTO_CREATE_BUCKET
+              value: {{ .Values.env.S3_AUTO_CREATE_BUCKET | quote }}
             - name: JWT_SECRET
               value: {{ .Values.env.JWT_SECRET }}
             - name: JWT_ACCESS_TOKEN_EXPIRATION

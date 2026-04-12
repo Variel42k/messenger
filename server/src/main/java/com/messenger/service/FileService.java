@@ -2,56 +2,69 @@ package com.messenger.service;
 
 import com.messenger.model.File;
 import com.messenger.repository.FileRepository;
+import com.messenger.repository.MessageFileRepository;
+import com.messenger.storage.FileStorage;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
+import java.io.InputStream;
+import java.util.Objects;
 import java.util.UUID;
 
 @Service
 public class FileService {
 
     private final FileRepository fileRepository;
+    private final MessageFileRepository messageFileRepository;
+    private final FileStorage fileStorage;
 
-    @Value("${file.upload.path:uploads/}")
-    private String uploadPath;
+    @Value("${file.upload.max-size-bytes:104857600}")
+    private long maxFileSizeBytes;
 
-    public FileService(FileRepository fileRepository) {
+    public FileService(FileRepository fileRepository, MessageFileRepository messageFileRepository, FileStorage fileStorage) {
         this.fileRepository = fileRepository;
+        this.messageFileRepository = messageFileRepository;
+        this.fileStorage = fileStorage;
     }
 
     /**
      * Save uploaded file and return File entity
      */
     public File saveFile(MultipartFile multipartFile, Long uploadedBy) throws IOException {
-        // Create upload directory if it doesn't exist
-        Path uploadDir = Paths.get(uploadPath);
-        Files.createDirectories(uploadDir);
-
-        // Generate unique filename
-        String originalFileName = multipartFile.getOriginalFilename();
-        String fileExtension = "";
-        if (originalFileName != null && originalFileName.contains(".")) {
-            fileExtension = originalFileName.substring(originalFileName.lastIndexOf("."));
+        if (multipartFile == null || multipartFile.isEmpty()) {
+            throw new IllegalArgumentException("File must not be empty");
         }
-        String storedFileName = UUID.randomUUID().toString() + fileExtension;
 
-        // Save file to disk
-        Path filePath = uploadDir.resolve(storedFileName);
-        Files.write(filePath, multipartFile.getBytes());
+        if (multipartFile.getSize() > maxFileSizeBytes) {
+            throw new IllegalArgumentException("File exceeds the maximum allowed size");
+        }
 
-        // Create and save file record in database
+        String originalFileName = sanitizeOriginalFilename(multipartFile.getOriginalFilename());
+        String fileExtension = "";
+        int extensionStart = originalFileName.lastIndexOf('.');
+        if (extensionStart > 0 && extensionStart < originalFileName.length() - 1) {
+            String candidateExtension = originalFileName.substring(extensionStart);
+            if (candidateExtension.matches("\\.[A-Za-z0-9]{1,10}")) {
+                fileExtension = candidateExtension;
+            }
+        }
+        String objectKey = UUID.randomUUID() + fileExtension;
+
+        try (InputStream inputStream = multipartFile.getInputStream()) {
+            fileStorage.store(objectKey, inputStream, multipartFile.getSize(), multipartFile.getContentType());
+        }
+
         File file = new File(
                 originalFileName,
-                storedFileName,
+                objectKey,
                 multipartFile.getContentType(),
                 multipartFile.getSize(),
-                "local", // TODO: migrate to MinIO S3 storage
-                storedFileName,
+                fileStorage.bucketName(),
+                objectKey,
                 uploadedBy);
 
         return fileRepository.save(file);
@@ -62,5 +75,51 @@ public class FileService {
      */
     public File findById(Long id) {
         return fileRepository.findById(id).orElse(null);
+    }
+
+    public Resource loadAsResource(File file) throws IOException {
+        return fileStorage.load(file.getObjectKey());
+    }
+
+    public boolean canUserAccessFile(Long fileId, Long userId, boolean isAdmin) {
+        File file = findById(fileId);
+        return canUserAccessFile(file, userId, isAdmin);
+    }
+
+    public boolean canUserAccessFile(File file, Long userId, boolean isAdmin) {
+        if (isAdmin) {
+            return true;
+        }
+
+        if (file == null || userId == null) {
+            return false;
+        }
+
+        if (Objects.equals(file.getUploadedBy(), userId)) {
+            return true;
+        }
+
+        return messageFileRepository.existsFileInUserChats(file.getId(), userId);
+    }
+
+    private String sanitizeOriginalFilename(String originalFilename) {
+        String candidate = StringUtils.cleanPath(originalFilename != null ? originalFilename : "file");
+        candidate = candidate.replace("\\", "/");
+        if (candidate.contains("..")) {
+            throw new IllegalArgumentException("Invalid file name");
+        }
+
+        String sanitized = candidate.substring(candidate.lastIndexOf('/') + 1)
+                .replace("\r", "")
+                .replace("\n", "");
+
+        if (!StringUtils.hasText(sanitized)) {
+            return "file";
+        }
+
+        if (sanitized.length() > 255) {
+            return sanitized.substring(0, 255);
+        }
+        return sanitized;
     }
 }
