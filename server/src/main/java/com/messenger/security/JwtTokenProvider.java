@@ -4,12 +4,15 @@ import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.Keys;
 import jakarta.annotation.PostConstruct;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.env.Environment;
+import org.springframework.core.env.Profiles;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Component;
 
 import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
 import java.util.Date;
+import java.util.Set;
 
 @Component
 public class JwtTokenProvider {
@@ -18,6 +21,12 @@ public class JwtTokenProvider {
     public static final String REFRESH_TOKEN_TYPE = "refresh";
     public static final String TWO_FACTOR_TOKEN_TYPE = "2fa_challenge";
     private static final String TOKEN_TYPE_CLAIM = "token_type";
+    private static final Set<String> DISALLOWED_PRODUCTION_SECRETS = Set.of(
+            "mySecretKeyForDevelopmentOnlyMustBe256Bits!!",
+            "testSecretKeyForTestingOnlyMustBe256Bits!!",
+            "mySecretKeyForDevelopmentOnly");
+
+    private final Environment environment;
 
     @Value("${jwt.secret}")
     private String jwtSecret;
@@ -31,6 +40,10 @@ public class JwtTokenProvider {
     @Value("${jwt.two-factor-token-expiration:300000}")
     private Long twoFactorTokenExpiration;
 
+    public JwtTokenProvider(Environment environment) {
+        this.environment = environment;
+    }
+
     @PostConstruct
     public void validateConfiguration() {
         if (jwtSecret == null || jwtSecret.isBlank()) {
@@ -40,6 +53,11 @@ public class JwtTokenProvider {
         int secretLength = jwtSecret.getBytes(StandardCharsets.UTF_8).length;
         if (secretLength < 32) {
             throw new IllegalStateException("JWT secret must be at least 32 bytes for HS256");
+        }
+
+        if (environment.acceptsProfiles(Profiles.of("prod"))
+                && DISALLOWED_PRODUCTION_SECRETS.contains(jwtSecret)) {
+            throw new IllegalStateException("JWT secret must not use a known development or test value in production");
         }
     }
 

@@ -1,232 +1,123 @@
-# Messenger — Платформа для обмена сообщениями в реальном времени
+# Messenger
 
-Полнофункциональная платформа для обмена сообщениями с сервером на Java Spring Boot, веб-клиентом на React и десктоп-клиентом JavaFX. Поддержка реального времени, обмена файлами, сквозного шифрования и аутентификации пользователей.
+[![CI](https://github.com/Variel42k/messenger/actions/workflows/ci.yml/badge.svg)](https://github.com/Variel42k/messenger/actions/workflows/ci.yml)
+[![License: AGPL-3.0](https://img.shields.io/badge/License-AGPL--3.0-blue.svg)](LICENSE)
 
-## Общая архитектура
+Self-hosted open-source messenger for teams and communities.
 
-- **Backend**: Java 17 + Spring Boot 3.x (Spring MVC)
-- **Frontend**: Веб-клиент React + десктоп-клиент JavaFX
-- **База данных**: PostgreSQL 15 с Flyway-миграциями
-- **Кэш**: Redis 7 для онлайн-статусов, pub/sub
-- **Хранилище файлов**: S3-совместимое (`localstack` в dev, внешний S3 в production) или `disk` (локальный/смонтированный диск)
-- **Dev S3 стек**: `localstack` (MinIO исключен из актуального `docker-compose.yml`)
-- **Реальное время**: WebSocket с протоколом STOMP
-- **Аутентификация**: JWT (access + refresh токены) с ролевым доступом
-- **Валидация**: Jakarta Validation (DTO с аннотациями @Valid)
-- **Безопасность**: IDOR-защита (userId из JWT), Path Traversal-защита, CORS из конфигурации
+Messenger — open-source self-hosted messaging platform for teams, communities and organizations that want control over their data. Проект подходит для частных рабочих пространств, внутренних сообществ, образовательных и организационных сред, где важно управлять инфраструктурой, хранением файлов и доступом пользователей самостоятельно.
 
-## Функции
+## Ключевые возможности
 
-- Обмен сообщениями в реальном времени через WebSocket/STOMP
-- JWT-аутентификация с обновлением токенов
-- Вложения файлов с загрузкой/скачиванием
-- Сквозное шифрование (AES) с визуальной индикацией уровня безопасности
-- Отслеживание онлайн-статуса
-- Контроль доступа на основе ролей (USER / ADMIN)
-- Управление участниками чата и назначение модераторов
-- Поддержка нескольких языков (EN, RU, ES)
-- Swagger UI для документации API
-- Автоматическая очистка устаревших данных (DataPurgeService)
+- Self-hosted deployment через Docker Compose, Kubernetes и Helm foundation
+- Real-time messaging через WebSocket/STOMP
+- File sharing с S3-compatible storage или disk storage mode
+- PostgreSQL + Redis для данных, статусов и вспомогательной инфраструктуры
+- JWT authentication с access/refresh токенами
+- Role-based access для пользовательских и административных сценариев
+- Web client на React
+- Desktop client на JavaFX
+- Swagger API docs и Spring Actuator health checks
 
-## Структура проекта
-
-```
-messenger/
-├── server/                     # Backend (Spring Boot)
-│   ├── src/main/java/
-│   │   ├── controller/         # REST-контроллеры
-│   │   ├── dto/                # DTO с валидацией
-│   │   ├── service/            # Бизнес-логика
-│   │   ├── repository/         # JPA-репозитории
-│   │   ├── config/             # Конфигурация (Security, WebSocket, CORS)
-│   │   ├── model/              # JPA-сущности
-│   │   └── security/           # JWT-фильтр, провайдер
-│   ├── src/main/resources/
-│   │   ├── application.yml     # Настройки приложения
-│   │   └── db/migration/       # Flyway-миграции (V1–V6)
-│   ├── Dockerfile
-│   └── pom.xml
-├── web-client/                 # Frontend (React)
-│   ├── src/
-│   │   ├── components/         # React-компоненты
-│   │   └── i18n/               # Мультиязычность
-│   ├── Dockerfile
-│   └── package.json
-├── client/                     # Desktop-клиент (JavaFX)
-│   └── pom.xml
-├── docker-compose.yml          # Оркестрация контейнеров
-├── .env                        # Переменные окружения (не в git)
-├── helm/                       # Helm-чарт для Kubernetes
-└── k8s/                        # Kubernetes-манифесты
-```
-
-## Предварительные требования
-
-- Docker & Docker Compose (основной способ запуска)
-- Java 17 (для локальной разработки)
-- Maven 3.8+ (для локальной разработки)
-
-## Установка и запуск
-
-### Docker Compose (рекомендуемый способ)
+## Quick Start
 
 ```bash
+git clone https://github.com/Variel42k/messenger.git
 cd messenger
-
-# Запуск всех сервисов одной командой
-docker-compose up -d --build
-
-# Проверка статуса
-docker-compose ps
-
-# Просмотр логов сервера
-docker logs messenger-server -f
+docker compose up -d --build
 ```
 
 После запуска:
-- **API сервер**: http://localhost:8080
-- **Swagger UI**: http://localhost:8080/swagger-ui/index.html
-- **Веб-клиент**: http://localhost:3001
-- **LocalStack S3 endpoint**: http://localhost:4566
 
-### Локальная разработка (без Docker)
+- API server: http://localhost:8080
+- Swagger UI: http://localhost:8080/swagger-ui/index.html
+- Web client: http://localhost:3001
+- LocalStack S3 endpoint: http://localhost:4566
+- Health check: http://localhost:8080/actuator/health
 
-1. Запустить инфраструктуру:
+Для локальной разработки backend/web без контейнеризации приложения:
+
 ```bash
-docker-compose up -d postgres redis localstack
-```
+docker compose up -d postgres redis localstack
 
-2. Запустить сервер:
-```bash
 cd server
-mvn spring-boot:run
+./mvnw spring-boot:run
+
+cd ../web-client
+npm install
+npm start
 ```
 
-3. Запустить веб-клиент:
-```bash
-cd web-client
-npm install && npm start
-```
+На Windows PowerShell для backend используйте `.\mvnw.cmd spring-boot:run`.
 
-### Kubernetes (Helm)
+## Документация
 
-```bash
-helm repo add bitnami https://charts.bitnami.com/bitnami
-helm repo update
-helm install messenger ./helm
-```
+- [Deployment](docs/DEPLOYMENT.md) — локальный запуск, Docker Compose, переменные окружения, PostgreSQL, Redis, LocalStack S3, disk storage, health checks, Swagger UI и troubleshooting.
+- [Production](docs/PRODUCTION.md) — рекомендации для production: secrets, внешние сервисы, HTTPS, CORS/WebSocket origins, backups, monitoring и Swagger.
+- [Architecture](docs/ARCHITECTURE.md) — обзор архитектуры backend, клиентов и инфраструктуры.
+- [Storage and Build Notes](docs/STORAGE_AND_BUILD.md) — дополнительные заметки по сборке и режимам хранения.
+- [Testing](docs/TESTING.md) — тестирование проекта.
 
-## Конфигурация
+## Why Messenger?
 
-### Переменные окружения (.env)
+Messenger is for teams, communities and organizations that want a private, self-hosted chat platform without depending on external messaging providers.
 
-| Переменная | Описание | По умолчанию |
-|-----------|----------|-------------|
-| `POSTGRES_DB` | Имя базы данных | messenger |
-| `POSTGRES_USER` | Пользователь БД | postgres |
-| `POSTGRES_PASSWORD` | Пароль БД | postgres |
-| `STORAGE_PROVIDER` | Провайдер хранилища (`s3` или `disk`) | s3 |
-| `STORAGE_DISK_PATH` | Путь внутри контейнера для `disk` режима | /data/uploads |
-| `S3_ENDPOINT` | S3 endpoint (dev: LocalStack) | http://localhost:4566 |
-| `S3_ACCESS_KEY` | S3 access key | test |
-| `S3_SECRET_KEY` | S3 secret key | test |
-| `S3_BUCKET_NAME` | Имя бакета | messenger-files |
-| `S3_AUTO_CREATE_BUCKET` | Автосоздание бакета (`true/false`) | true |
-| `JWT_SECRET` | Секрет JWT | (из application.yml) |
+Ключевые преимущества:
 
-### Миграции базы данных
+- Self-hosted deployment
+- Real-time messaging
+- File sharing
+- PostgreSQL + Redis
+- S3-compatible storage
+- JWT authentication
+- Role-based access
+- WebSocket/STOMP
+- Web client
+- Desktop client
+- Docker Compose
+- Kubernetes/Helm foundation
+- Swagger API docs
 
-Flyway управляет миграциями автоматически. Файлы миграций: `server/src/main/resources/db/migration/V[N]__[description].sql`.
+## Screenshots
 
-| Миграция | Описание |
-|----------|----------|
-| V1 | Создание таблиц (users, chats, messages, files, user_settings) |
-| V2 | Добавление admin-пользователя |
-| V3 | LDAP-настройки |
-| V4 | Политики безопасности |
-| V5 | Поля шифрования (encrypted, encryption_key, encryption_algorithm, security_level) |
-| V6 | Таблицы файлов и связей message_files |
+> Screenshots and demo GIFs will be added soon.
 
-## Конечные точки API
+## Community and Enterprise
 
-### Аутентификация
-| Метод | Путь | Описание | Auth |
-|-------|------|----------|------|
-| POST | `/api/auth/register` | Регистрация пользователя | ❌ |
-| POST | `/api/auth/login` | Вход пользователя | ❌ |
-| POST | `/api/auth/refresh` | Обновление токена | ❌ |
+Messenger Community Edition остаётся open-source self-hosted версией и распространяется под AGPL-3.0.
 
-### Чаты (userId извлекается из JWT)
-| Метод | Путь | Описание | Auth |
-|-------|------|----------|------|
-| GET | `/api/chats` | Чаты текущего пользователя | ✅ |
-| POST | `/api/chats` | Создать чат | ✅ |
-| GET | `/api/chats/{chatId}` | Получить чат по ID | ✅ |
-| POST | `/api/chats/{chatId}/members` | Добавить участника | ✅ |
-| DELETE | `/api/chats/{chatId}/members/{userId}` | Удалить участника | ✅ |
-| PUT | `/api/chats/{chatId}/type` | Изменить тип чата | ✅ |
-| PUT | `/api/chats/{chatId}/encryption` | Настройки шифрования | ✅ |
-| PUT | `/api/chats/{chatId}/moderator` | Назначить модератора | ✅ |
+Commercial / Enterprise направление может включать коммерческую лицензию, поддержку, managed hosting, private deployment assistance, SLA и enterprise-функции, например SSO, audit logs и advanced admin capabilities.
 
-### Сообщения (senderId извлекается из JWT)
-| Метод | Путь | Описание | Auth |
-|-------|------|----------|------|
-| GET | `/api/messages/chat/{chatId}` | Сообщения чата | ✅ |
-| POST | `/api/messages/create` | Отправить сообщение | ✅ |
+Эти enterprise-фичи сейчас только документируются как возможное направление развития и не считаются реализованными возможностями текущей Community Edition.
 
-### Файлы
-| Метод | Путь | Описание | Auth |
-|-------|------|----------|------|
-| POST | `/api/files/upload` | Загрузить файл | ✅ |
-| GET | `/api/files/{fileId}` | Скачать файл | ✅ |
+## License / Commercial Use
 
-Правила доступа к файлам:
+Messenger Community Edition распространяется под GNU Affero General Public License v3.0. Полный текст лицензии находится в [LICENSE](LICENSE), дополнительная информация — в [NOTICE](NOTICE).
 
-- `ADMIN` может скачать любой файл.
-- Владелец (`uploaded_by`) может скачать свой файл даже без привязки к сообщению.
-- Остальные пользователи получают доступ только если файл прикреплен к сообщению в чате, где они состоят.
+Commercial licensing options may be available for organizations that need different licensing terms, enterprise support, private deployment assistance, or managed hosting.
 
-### WebSocket
-| Путь | Описание |
-|------|----------|
-| `/ws` | Точка подключения WebSocket |
-| `/app/chat.send` | Отправка сообщения |
-| `/app/chat.join` | Присоединение к чату |
-| `/app/chat.leave` | Выход из чата |
-| `/user/queue/messages` | Приватные сообщения |
-| `/topic/chat.{chatId}` | Сообщения чата |
+## Recommended GitHub Topics
 
-## Безопасность
+`messenger` `chat` `real-time-chat` `self-hosted` `team-chat` `spring-boot` `react` `postgresql` `redis` `websocket` `stomp` `docker` `kubernetes` `helm` `s3` `java` `open-source`
 
-- JWT-токены с access/refresh механизмом
-- IDOR-защита: userId/senderId извлекаются из JWT (`@AuthenticationPrincipal`)
-- Path Traversal защита в FileController
-- Валидация входных данных через DTO (@Valid, @NotBlank, @Size, @Email)
-- GlobalExceptionHandler для унифицированных ответов об ошибках
-- CORS из конфигурации (не wildcard)
-- WebSocket origins из конфигурации
-- Пароли хешируются BCrypt
-- Транзакционность (@Transactional) в сервисном слое
-- SLF4J-логирование (без System.err)
-- Креды в .env, не в docker-compose.yml
+## Технологический стек
 
-## Мониторинг
+- Backend: Java 17, Spring Boot 3.x, Spring MVC, Spring Security, WebSocket/STOMP, Spring Actuator
+- Database: PostgreSQL 15, Flyway migrations, JPA/Hibernate
+- Cache/coordination: Redis 7
+- File storage: S3-compatible storage через LocalStack в dev или внешний S3 в production; альтернативно disk storage
+- Web client: React, Webpack
+- Desktop client: JavaFX
+- Infrastructure: Docker Compose, Helm chart foundation
 
-- Spring Actuator: `/actuator/health`, `/actuator/info`
-- Swagger UI: `/swagger-ui/index.html`
-- Структурированное логирование через SLF4J
+## Default Development Credentials
 
-## Учётные данные по умолчанию
+Эти значения предназначены только для локальной разработки:
 
 | Сервис | Логин | Пароль |
-|--------|-------|--------|
-| Приложение (admin) | admin | admin123 |
-| PostgreSQL | postgres | postgres |
-| LocalStack (S3 dev) | test | test |
+| --- | --- | --- |
+| Приложение (admin) | `admin` | `admin123` |
+| PostgreSQL | `postgres` | `password` |
+| LocalStack S3 | `test` | `test` |
 
-## Storage and Build Notes
-
-Подробные инструкции по Maven Wrapper и выбору хранилища (`disk`/`s3`) находятся в:
-
-- `docs/STORAGE_AND_BUILD.md`
-- `docker-compose.override.yml.example` (пример для Linux и смонтированного диска)
+Перед production-запуском обязательно замените dev-секреты и credentials. Минимальные рекомендации описаны в [docs/PRODUCTION.md](docs/PRODUCTION.md).

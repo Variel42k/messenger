@@ -28,6 +28,11 @@ desktop.ini
 
 # Environment
 .env
+docker-compose.override.yml
+
+# Runtime data
+logs/
+uploads/
 
 # Node
 **/node_modules/
