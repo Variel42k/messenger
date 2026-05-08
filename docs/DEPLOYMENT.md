@@ -46,8 +46,14 @@ docker compose ps
 - `messenger-postgres` — PostgreSQL 15
 - `messenger-redis` — Redis 7
 - `messenger-localstack` — LocalStack S3 для dev
+- `messenger-mailhog` — local SMTP catcher and web UI on `http://localhost:8025`
 - `messenger-server` — Spring Boot backend
+- `messenger-worker` — worker topology placeholder running the server artifact on an internal port
+- `messenger-seed-init` — one-shot seed verification after Flyway migrations
 - `messenger-web-client` — React web client
+
+Copy `.env.example` to `.env` for local overrides. All core services define healthchecks, and the
+server emits/propagates `X-Trace-Id` in logs and responses.
 
 Полезные команды:
 

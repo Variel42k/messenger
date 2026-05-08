@@ -1,6 +1,7 @@
 package com.messenger.model;
 
 import com.messenger.model.enums.ChatRole;
+import com.messenger.model.enums.MembershipState;
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
 
@@ -19,6 +20,9 @@ public class UserChat {
 
     @Enumerated(EnumType.STRING)
     private ChatRole role;
+
+    @Enumerated(EnumType.STRING)
+    private MembershipState state = MembershipState.ACTIVE;
 
     @Column(name = "joined_at")
     private LocalDateTime joinedAt;
@@ -41,6 +45,7 @@ public class UserChat {
         this.chatId = chatId;
         this.userId = userId;
         this.role = role;
+        this.state = MembershipState.ACTIVE;
         this.joinedAt = LocalDateTime.now();
     }
 
@@ -56,6 +61,9 @@ public class UserChat {
 
     public ChatRole getRole() { return role; }
     public void setRole(ChatRole role) { this.role = role; }
+
+    public MembershipState getState() { return state; }
+    public void setState(MembershipState state) { this.state = state; }
 
     public LocalDateTime getJoinedAt() { return joinedAt; }
     public void setJoinedAt(LocalDateTime joinedAt) { this.joinedAt = joinedAt; }

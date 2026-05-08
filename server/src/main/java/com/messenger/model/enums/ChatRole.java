@@ -1,5 +1,5 @@
 package com.messenger.model.enums;
 
 public enum ChatRole {
-    MEMBER, MODERATOR, ADMIN, OWNER
+    GUEST, READONLY, MEMBER, MODERATOR, ADMIN, OWNER
 }

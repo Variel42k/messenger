@@ -5,6 +5,7 @@ import com.messenger.model.File;
 import com.messenger.model.Message;
 import com.messenger.model.MessageFile;
 import com.messenger.model.enums.MessageStatus;
+import com.messenger.model.enums.MessageType;
 import com.messenger.repository.MessageFileRepository;
 import com.messenger.repository.MessageRepository;
 import org.slf4j.Logger;
@@ -12,6 +13,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -53,6 +55,19 @@ public class MessageService {
             }
         }
         return messages;
+    }
+
+    @Transactional(readOnly = true)
+    public Optional<Message> findByClientMsgId(Long chatId, Long senderId, String clientMsgId) {
+        if (clientMsgId == null || clientMsgId.isBlank()) {
+            return Optional.empty();
+        }
+        return messageRepository.findByChat_IdAndSenderIdAndClientMsgId(chatId, senderId, clientMsgId);
+    }
+
+    @Transactional(readOnly = true)
+    public Optional<Message> findById(Long messageId) {
+        return messageRepository.findById(messageId);
     }
 
     @Transactional
@@ -106,6 +121,19 @@ public class MessageService {
      */
     @Transactional
     public Message createMessage(Long chatId, Long senderId, String content) {
+        return createMessage(chatId, senderId, content, null);
+    }
+
+    @Transactional
+    public Message createMessage(Long chatId, Long senderId, String content, String clientMsgId) {
+        if (clientMsgId != null && !clientMsgId.isBlank()) {
+            Optional<Message> existingMessage = messageRepository.findByChat_IdAndSenderIdAndClientMsgId(
+                    chatId, senderId, clientMsgId);
+            if (existingMessage.isPresent()) {
+                return existingMessage.get();
+            }
+        }
+
         // Получаем чат по ID
         Chat chat = chatService.getChatById(chatId).orElse(null);
         if (chat == null) {
@@ -120,6 +148,11 @@ public class MessageService {
         message.setChat(chat);
         message.setSenderId(senderId);
         message.setContent(content);
+        message.setClientMsgId(clientMsgId);
+        message.setMessageType(MessageType.TEXT);
+        message.setStatus(MessageStatus.SENT);
+        message.setCreatedAt(LocalDateTime.now());
+        message.setUpdatedAt(LocalDateTime.now());
 
         // Если чат зашифрован, шифруем содержимое сообщения перед сохранением
         if (chat.getEncrypted() && chat.getEncryptionKey() != null) {
@@ -133,6 +166,41 @@ public class MessageService {
             }
         }
 
+        return messageRepository.save(message);
+    }
+
+    @Transactional
+    public Message updateMessageContent(Long messageId, String content) {
+        Message message = messageRepository.findById(messageId)
+                .orElseThrow(() -> new IllegalArgumentException("Message not found with id: " + messageId));
+        if (message.getDeletedAt() != null) {
+            throw new IllegalStateException("Deleted messages cannot be edited");
+        }
+
+        message.setContent(content);
+        message.setEditedAt(LocalDateTime.now());
+        message.setUpdatedAt(LocalDateTime.now());
+
+        Chat chat = message.getChat();
+        if (chat != null && chat.getEncrypted() && chat.getEncryptionKey() != null) {
+            try {
+                message.setContent(chatService.encryptMessage(content, chat.getEncryptionKey()));
+                message.setEncrypted(true);
+            } catch (Exception e) {
+                logger.warn("Error encrypting edited message: {}", e.getMessage());
+            }
+        }
+
+        return messageRepository.save(message);
+    }
+
+    @Transactional
+    public Message softDeleteMessage(Long messageId) {
+        Message message = messageRepository.findById(messageId)
+                .orElseThrow(() -> new IllegalArgumentException("Message not found with id: " + messageId));
+        message.setDeletedAt(LocalDateTime.now());
+        message.setUpdatedAt(LocalDateTime.now());
+        message.setContent(null);
         return messageRepository.save(message);
     }
 

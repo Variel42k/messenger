@@ -2,6 +2,21 @@
 
 ## Модульные тесты
 
+Current backend command:
+
+```powershell
+cd server
+.\mvnw.cmd test
+```
+
+Focused production-grade groups/channels coverage:
+
+- `AccessControlServiceTest` covers room RBAC, readonly channels, guest access, bans, and deactivation.
+- `MessageServiceIdempotencyTest` covers `clientMsgId` retry behavior.
+- `RealtimeEventPublisherTest` covers the versioned WebSocket event envelope.
+
+CI also runs a Flyway migration smoke job against PostgreSQL 15 and `docker compose config`.
+
 ### Тесты сервисного слоя
 ```java
 // Example: UserService test

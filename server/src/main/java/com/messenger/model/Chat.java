@@ -40,11 +40,20 @@ public class Chat {
     @Column(name = "created_by")
     private Long createdById;
 
+    @Column(name = "parent_group_id")
+    private Long parentGroupId;
+
+    @Column(name = "is_readonly")
+    private Boolean readonly = false;
+
     @Column(name = "created_at")
     private LocalDateTime createdAt;
 
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
+
+    @Column(name = "deleted_at")
+    private LocalDateTime deletedAt;
 
     @JsonIgnore
     @OneToMany(mappedBy = "chat", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
@@ -151,6 +160,22 @@ public class Chat {
         this.createdById = createdById;
     }
 
+    public Long getParentGroupId() {
+        return parentGroupId;
+    }
+
+    public void setParentGroupId(Long parentGroupId) {
+        this.parentGroupId = parentGroupId;
+    }
+
+    public Boolean getReadonly() {
+        return readonly != null ? readonly : false;
+    }
+
+    public void setReadonly(Boolean readonly) {
+        this.readonly = readonly;
+    }
+
     public LocalDateTime getCreatedAt() {
         return createdAt;
     }
@@ -165,6 +190,14 @@ public class Chat {
 
     public void setUpdatedAt(LocalDateTime updatedAt) {
         this.updatedAt = updatedAt;
+    }
+
+    public LocalDateTime getDeletedAt() {
+        return deletedAt;
+    }
+
+    public void setDeletedAt(LocalDateTime deletedAt) {
+        this.deletedAt = deletedAt;
     }
 
     public Set<UserChat> getMembers() {

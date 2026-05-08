@@ -55,6 +55,10 @@ npm start
 - [Deployment](docs/DEPLOYMENT.md) — локальный запуск, Docker Compose, переменные окружения, PostgreSQL, Redis, LocalStack S3, disk storage, health checks, Swagger UI и troubleshooting.
 - [Production](docs/PRODUCTION.md) — рекомендации для production: secrets, внешние сервисы, HTTPS, CORS/WebSocket origins, backups, monitoring и Swagger.
 - [Architecture](docs/ARCHITECTURE.md) — обзор архитектуры backend, клиентов и инфраструктуры.
+- [Groups and Channels API](docs/API_GROUPS_CHANNELS.md) — production-grade group/channel, membership, message, and moderation contracts.
+- [Groups/Channels Gap Analysis](docs/GROUPS_CHANNELS_GAP_ANALYSIS.md) — audit, target model, missing work, rollback, and PR notes.
+- [QA Matrix](docs/QA_GROUPS_CHANNELS_TEST_MATRIX.md) — API, realtime, responsive, accessibility, and regression checklist.
+- [ADR Index](docs/adr) — domain model, realtime envelope, deactivation/ban policy, and local topology decisions.
 - [Storage and Build Notes](docs/STORAGE_AND_BUILD.md) — дополнительные заметки по сборке и режимам хранения.
 - [Testing](docs/TESTING.md) — тестирование проекта.
 

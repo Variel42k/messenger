@@ -5,10 +5,15 @@ import com.messenger.model.enums.MessageStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface MessageRepository extends JpaRepository<Message, Long> {
     List<Message> findByChat_IdOrderByCreatedAtAsc(Long chatId);
+
+    List<Message> findByChat_IdAndDeletedAtIsNullOrderByCreatedAtAsc(Long chatId);
+
+    Optional<Message> findByChat_IdAndSenderIdAndClientMsgId(Long chatId, Long senderId, String clientMsgId);
 
     List<Message> findByChat_IdAndStatus(Long chatId, MessageStatus status);
 

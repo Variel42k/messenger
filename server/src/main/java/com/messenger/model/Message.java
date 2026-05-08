@@ -21,10 +21,13 @@ public class Message {
     @JoinColumn(name = "chat_id", nullable = false)
     private Chat chat;
 
-    @Column(name = "sender_id", nullable = false)
+    @Column(name = "sender_id")
     private Long senderId;
 
     private String content;
+
+    @Column(name = "client_msg_id")
+    private String clientMsgId;
 
     @Column(name = "is_encrypted")
     private Boolean encrypted = false;
@@ -44,6 +47,12 @@ public class Message {
 
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
+
+    @Column(name = "edited_at")
+    private LocalDateTime editedAt;
+
+    @Column(name = "deleted_at")
+    private LocalDateTime deletedAt;
 
     @JsonIgnore
     @OneToMany(mappedBy = "message", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
@@ -101,6 +110,14 @@ public class Message {
         this.content = content;
     }
 
+    public String getClientMsgId() {
+        return clientMsgId;
+    }
+
+    public void setClientMsgId(String clientMsgId) {
+        this.clientMsgId = clientMsgId;
+    }
+
     public Boolean isEncrypted() {
         return encrypted != null ? encrypted : false;
     }
@@ -147,6 +164,22 @@ public class Message {
 
     public void setUpdatedAt(LocalDateTime updatedAt) {
         this.updatedAt = updatedAt;
+    }
+
+    public LocalDateTime getEditedAt() {
+        return editedAt;
+    }
+
+    public void setEditedAt(LocalDateTime editedAt) {
+        this.editedAt = editedAt;
+    }
+
+    public LocalDateTime getDeletedAt() {
+        return deletedAt;
+    }
+
+    public void setDeletedAt(LocalDateTime deletedAt) {
+        this.deletedAt = deletedAt;
     }
 
     public Set<MessageFile> getMessageFiles() {

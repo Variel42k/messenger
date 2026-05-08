@@ -1,5 +1,6 @@
 package com.messenger.controller;
 
+import com.messenger.dto.UpdateMessageRequest;
 import com.messenger.model.File;
 import com.messenger.model.Message;
 import com.messenger.model.MessageFile;
@@ -9,7 +10,11 @@ import com.messenger.repository.MessageFileRepository;
 import com.messenger.service.ChatService;
 import com.messenger.service.FileService;
 import com.messenger.service.MessageService;
+import com.messenger.service.AccessControlService;
+import com.messenger.service.AuditLogService;
+import com.messenger.service.RealtimeEventPublisher;
 import com.messenger.service.UserService;
+import jakarta.validation.Valid;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
@@ -20,6 +25,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * Controller for message management
@@ -35,14 +41,22 @@ public class MessageController {
     private final FileService fileService;
     private final MessageFileRepository messageFileRepository;
     private final UserService userService;
+    private final AccessControlService accessControlService;
+    private final AuditLogService auditLogService;
+    private final RealtimeEventPublisher realtimeEventPublisher;
 
     public MessageController(MessageService messageService, ChatService chatService, FileService fileService,
-            MessageFileRepository messageFileRepository, UserService userService) {
+            MessageFileRepository messageFileRepository, UserService userService,
+            AccessControlService accessControlService, AuditLogService auditLogService,
+            RealtimeEventPublisher realtimeEventPublisher) {
         this.messageService = messageService;
         this.chatService = chatService;
         this.fileService = fileService;
         this.messageFileRepository = messageFileRepository;
         this.userService = userService;
+        this.accessControlService = accessControlService;
+        this.auditLogService = auditLogService;
+        this.realtimeEventPublisher = realtimeEventPublisher;
     }
 
     /**
@@ -160,5 +174,44 @@ public class MessageController {
             logger.error("Error creating message: {}", e.getMessage());
             return ResponseEntity.badRequest().build();
         }
+    }
+
+    @PatchMapping("/{messageId}")
+    public ResponseEntity<Message> updateMessage(@PathVariable Long messageId,
+            @Valid @RequestBody UpdateMessageRequest request,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        User currentUser = getCurrentUser(userDetails);
+        if (currentUser == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        Message existing = messageService.findById(messageId).orElse(null);
+        if (!accessControlService.canMutateMessage(currentUser, existing)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
+
+        Message message = messageService.updateMessageContent(messageId, request.getContent());
+        auditLogService.record(currentUser, "message.updated", "message", messageId, message.getChatId(), null);
+        realtimeEventPublisher.publishToChannel(message.getChatId(), "message.updated", message.getId(),
+                Map.of("messageId", message.getId(), "channelId", message.getChatId()));
+        return ResponseEntity.ok(message);
+    }
+
+    @DeleteMapping("/{messageId}")
+    public ResponseEntity<Message> deleteMessage(@PathVariable Long messageId,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        User currentUser = getCurrentUser(userDetails);
+        if (currentUser == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        Message existing = messageService.findById(messageId).orElse(null);
+        if (!accessControlService.canMutateMessage(currentUser, existing)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
+
+        Message message = messageService.softDeleteMessage(messageId);
+        auditLogService.record(currentUser, "message.deleted", "message", messageId, message.getChatId(), null);
+        realtimeEventPublisher.publishToChannel(message.getChatId(), "message.deleted", message.getId(),
+                Map.of("messageId", message.getId(), "channelId", message.getChatId()));
+        return ResponseEntity.ok(message);
     }
 }

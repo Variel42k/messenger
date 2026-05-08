@@ -11,7 +11,7 @@ permissions:
 
 jobs:
   backend:
-    name: Backend tests
+    name: Backend unit tests
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -29,6 +29,76 @@ jobs:
 
       - name: Run backend tests
         run: ./mvnw test
+
+  backend-contracts:
+    name: API and websocket contract tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: server
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: maven
+
+      - name: Run focused contract tests
+        run: ./mvnw -Dtest=AccessControlServiceTest,MessageServiceIdempotencyTest,RealtimeEventPublisherTest test
+
+  migration-smoke:
+    name: Flyway migration smoke
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_DB: messenger
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d messenger"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+    defaults:
+      run:
+        working-directory: server
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: maven
+
+      - name: Apply Flyway migrations
+        run: >
+          ./mvnw -q
+          -Dflyway.url=jdbc:postgresql://localhost:5432/messenger
+          -Dflyway.user=postgres
+          -Dflyway.password=password
+          -Dflyway.locations=filesystem:src/main/resources/db/migration
+          org.flywaydb:flyway-maven-plugin:9.22.3:migrate
+
+  compose-config:
+    name: Docker Compose config
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate compose file
+        run: docker compose config
 
   web-client:
     name: Web client build

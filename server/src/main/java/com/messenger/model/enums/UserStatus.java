@@ -1,5 +1,5 @@
 package com.messenger.model.enums;
 
 public enum UserStatus {
-    ACTIVE, INACTIVE, BANNED
+    ACTIVE, DEACTIVATED, INACTIVE, BANNED
 }

@@ -4,11 +4,13 @@ import com.messenger.model.Chat;
 import com.messenger.model.UserChat;
 import com.messenger.model.enums.ChatType;
 import com.messenger.model.enums.ChatRole;
+import com.messenger.model.enums.MembershipState;
 import com.messenger.repository.ChatRepository;
 import com.messenger.repository.UserChatRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
@@ -30,10 +32,10 @@ public class ChatService {
 
     @Transactional(readOnly = true)
     public List<Chat> getUserChats(Long userId) {
-        List<UserChat> userChats = userChatRepository.findByUserId(userId);
+        List<UserChat> userChats = userChatRepository.findByUserIdAndState(userId, MembershipState.ACTIVE);
         return userChats.stream()
                 .map(uc -> chatRepository.findById(uc.getChatId()).orElse(null))
-                .filter(chat -> chat != null)
+                .filter(chat -> chat != null && chat.getDeletedAt() == null)
                 .toList();
     }
 
@@ -69,6 +71,32 @@ public class ChatService {
         return savedChat;
     }
 
+    @Transactional
+    public Chat createGroup(String name, String description, Long createdById) {
+        Chat group = createChat(name, ChatType.GROUP, false, null, createdById);
+        group.setDescription(description);
+        group.setUpdatedAt(LocalDateTime.now());
+        return chatRepository.save(group);
+    }
+
+    @Transactional
+    public Chat createChannel(Long groupId, String name, String description, Boolean readonly, Long createdById) {
+        Chat group = chatRepository.findById(groupId)
+                .filter(chat -> chat.getType() == ChatType.GROUP)
+                .filter(chat -> chat.getDeletedAt() == null)
+                .orElseThrow(() -> new IllegalArgumentException("Group not found with id: " + groupId));
+
+        Chat channel = new Chat(name, ChatType.CHANNEL, createdById);
+        channel.setDescription(description);
+        channel.setParentGroupId(group.getId());
+        channel.setReadonly(readonly != null ? readonly : false);
+        Chat savedChannel = chatRepository.save(channel);
+
+        UserChat ownerMembership = new UserChat(savedChannel.getId(), createdById, ChatRole.OWNER);
+        userChatRepository.save(ownerMembership);
+        return savedChannel;
+    }
+
     public Chat createChat(String name, ChatType type, Boolean encrypted, String encryptionKey, Long createdById) {
         return createChat(name, type, encrypted, encryptionKey, "AES", "SECURE", createdById);
     }
@@ -79,7 +107,14 @@ public class ChatService {
 
     @Transactional
     public Chat addMemberToChat(Long chatId, Long userId, ChatRole role) {
-        UserChat userChat = new UserChat(chatId, userId, role);
+        UserChat userChat = userChatRepository.findByChatIdAndUserId(chatId, userId)
+                .orElseGet(() -> new UserChat(chatId, userId, role));
+        userChat.setRole(role);
+        userChat.setState(MembershipState.ACTIVE);
+        userChat.setLeftAt(null);
+        if (userChat.getJoinedAt() == null) {
+            userChat.setJoinedAt(LocalDateTime.now());
+        }
         userChatRepository.save(userChat);
         return chatRepository.findById(chatId).orElse(null);
     }
@@ -88,7 +123,10 @@ public class ChatService {
     public Chat removeMemberFromChat(Long chatId, Long userId) {
         Optional<UserChat> userChatOpt = userChatRepository.findByChatIdAndUserId(chatId, userId);
         if (userChatOpt.isPresent()) {
-            userChatRepository.delete(userChatOpt.get());
+            UserChat membership = userChatOpt.get();
+            membership.setState(MembershipState.LEFT);
+            membership.setLeftAt(LocalDateTime.now());
+            userChatRepository.save(membership);
         }
         return chatRepository.findById(chatId).orElse(null);
     }
@@ -149,13 +187,15 @@ public class ChatService {
 
     @Transactional(readOnly = true)
     public boolean isUserMember(Long chatId, Long userId) {
-        return userChatRepository.existsByChatIdAndUserId(chatId, userId);
+        return userChatRepository.existsByChatIdAndUserIdAndState(chatId, userId, MembershipState.ACTIVE);
     }
 
     @Transactional(readOnly = true)
     public boolean userHasAnyRole(Long chatId, Long userId, ChatRole... roles) {
         Optional<UserChat> membership = userChatRepository.findByChatIdAndUserId(chatId, userId);
-        if (membership.isEmpty()) {
+        if (membership.isEmpty()
+                || membership.get().getState() != MembershipState.ACTIVE
+                || membership.get().getLeftAt() != null) {
             return false;
         }
 
