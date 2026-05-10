@@ -1,0 +1,110 @@
+export const CONNECTION_STATUS = {
+  idle: 'idle',
+  connecting: 'connecting',
+  connected: 'connected',
+  reconnecting: 'reconnecting',
+  offline: 'offline',
+  closed: 'closed',
+  forcedClosed: 'forced_closed',
+};
+
+export const AUTH_STATUS = {
+  loading: 'loading',
+  authenticated: 'authenticated',
+  anonymous: 'anonymous',
+};
+
+export function createInitialState(overrides = {}) {
+  return {
+    session: {
+      currentUserId: null,
+      authStatus: AUTH_STATUS.anonymous,
+      globalRole: null,
+      connectionStatus: CONNECTION_STATUS.idle,
+      permissions: {},
+      accessRevokedReason: null,
+      ...overrides.session,
+    },
+    users: {
+      byId: {},
+      allIds: [],
+      status: {},
+      roles: {},
+      presence: {},
+      ...overrides.users,
+    },
+    groups: {
+      byId: {},
+      allIds: [],
+      userGroupIds: [],
+      unreadByGroup: {},
+      ...overrides.groups,
+    },
+    channels: {
+      byId: {},
+      byGroupId: {},
+      activeChannelId: null,
+      unreadByChannel: {},
+      ...overrides.channels,
+    },
+    memberships: {
+      byId: {},
+      byScope: {},
+      byUser: {},
+      ...overrides.memberships,
+    },
+    messages: {
+      byId: {},
+      idsByChannel: {},
+      pendingByClientMsgId: {},
+      cursorByChannel: {},
+      hasMoreByChannel: {},
+      failedByClientMsgId: {},
+      scrollAnchorByChannel: {},
+      draftByChannel: {},
+      ...overrides.messages,
+    },
+    presence: {
+      byUserId: {},
+      typingByChannel: {},
+      ...overrides.presence,
+    },
+    ui: {
+      activePane: 'groups',
+      activeDrawer: null,
+      activeBottomSheet: null,
+      activeDialog: null,
+      activeToast: null,
+      dialogs: {},
+      selectedGroupId: null,
+      selectedChannelId: null,
+      mobileNavigationStack: ['groups'],
+      keyboardVisible: false,
+      viewportHeight: null,
+      safeAreaInsets: { top: 0, right: 0, bottom: 0, left: 0 },
+      toasts: [],
+      ...overrides.ui,
+    },
+    navigation: {
+      selectedGroupId: null,
+      selectedChannelId: null,
+      mobileStack: ['groups'],
+      previousScreen: null,
+      returnTo: null,
+      accessRevokedReason: null,
+      ...overrides.navigation,
+    },
+    audit: {
+      items: [],
+      filters: {},
+      pagination: { cursor: null, hasMore: true },
+      ...overrides.audit,
+    },
+    realtime: {
+      processedEventIds: {},
+      channelSeqByChannel: {},
+      lastBootstrapAt: null,
+      ...overrides.realtime,
+    },
+  };
+}

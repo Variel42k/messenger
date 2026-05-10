@@ -101,27 +101,27 @@ jobs:
         run: docker compose config
 
   web-client:
-    name: Web client build
+    name: Web client tests and build
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: web-client
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: "18"
-          cache: npm
-          cache-dependency-path: web-client/package-lock.json
+      - name: Run web client tests and build in Docker
+        run: >
+          docker run --rm
+          -v "$PWD/web-client:/app"
+          -w /app
+          node:18-alpine
+          sh -c "npm ci && npm run test:foundation && npm run test:mobile && npm run build"
 
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Build web client
-        run: npm run build
+      - name: Run mobile E2E in Playwright Docker
+        run: >
+          docker run --rm
+          -v "$PWD/web-client:/app"
+          -w /app
+          mcr.microsoft.com/playwright:v1.49.1-jammy
+          sh -c "npm ci && npm run test:e2e:mobile"
 
   desktop-client:
     name: Desktop client package

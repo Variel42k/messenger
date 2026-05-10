@@ -7,7 +7,10 @@
   "scripts": {
     "start": "webpack serve --mode development",
     "build": "webpack --mode production",
-    "dev": "webpack --mode development"
+    "dev": "webpack --mode development",
+    "test:foundation": "node scripts/run-foundation-tests.js",
+    "test:mobile": "node scripts/run-mobile-tests.js",
+    "test:e2e:mobile": "playwright test"
   },
   "dependencies": {
     "react": "^18.2.0",
@@ -28,6 +31,7 @@
     "webpack-dev-server": "^4.15.0",
     "css-loader": "^6.8.0",
     "style-loader": "^3.3.0",
-    "json-loader": "^0.5.7"
+    "json-loader": "^0.5.7",
+    "@playwright/test": "1.49.1"
   }
 }
