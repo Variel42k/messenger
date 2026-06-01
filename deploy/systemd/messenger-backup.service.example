@@ -1,0 +1,9 @@
+[Unit]
+Description=Messenger backup
+Requires=docker.service
+After=docker.service
+
+[Service]
+Type=oneshot
+WorkingDirectory=/srv/messenger
+ExecStart=/srv/messenger/scripts/messengerctl.sh backup --backup-dir /srv/messenger/backups

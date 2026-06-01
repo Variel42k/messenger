@@ -1,0 +1,19 @@
+# Пример Caddy reverse proxy для Messenger.
+# Замените chat.example.com и установите:
+#   sudo cp deploy/caddy/Caddyfile.example /etc/caddy/Caddyfile
+#   sudo systemctl reload caddy
+
+chat.example.com {
+  encode gzip zstd
+
+  @api path /api/* /actuator/health
+  reverse_proxy @api 127.0.0.1:8080
+
+  @ws path /ws/*
+  reverse_proxy @ws 127.0.0.1:8080
+
+  @blocked path /swagger-ui* /v3/api-docs* /actuator/metrics* /actuator/prometheus* /actuator/info
+  respond @blocked 404
+
+  reverse_proxy 127.0.0.1:3001
+}
