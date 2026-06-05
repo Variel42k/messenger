@@ -1,0 +1,10 @@
+# Пример локального federation inventory.
+# Скопируйте в deploy/federation/cluster.yml и замените значения.
+# Это конфигурация topology/trust inventory и health validation, а не реализация backend federation protocol.
+
+cluster:
+  id: "cluster-a"
+  name: "Messenger Cluster A"
+  url: "https://chat-a.example.com"
+  mode: "config-topology-validation-only"
+  healthEndpoint: "/actuator/health"

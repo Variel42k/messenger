@@ -138,6 +138,14 @@ env:
   WS_ALLOWED_ORIGINS: "http://localhost:3000,http://localhost:8080"
   CORS_ALLOWED_ORIGINS: "http://localhost:3000,http://localhost:8080,http://localhost:4200"
 
+# Federation inventory values. This only prepares topology/config metadata.
+# Backend federation protocol is not implemented by these values.
+federation:
+  enabled: false
+  clusterId: ""
+  clusterName: ""
+  clusterUrl: ""
+
 nodeSelector: {}
 
 tolerations: []

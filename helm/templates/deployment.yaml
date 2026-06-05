@@ -51,47 +51,57 @@ spec:
             periodSeconds: 5
           env:
             - name: STORAGE_PROVIDER
-              value: {{ .Values.env.STORAGE_PROVIDER }}
+              value: {{ .Values.env.STORAGE_PROVIDER | quote }}
             - name: STORAGE_DISK_PATH
-              value: {{ .Values.env.STORAGE_DISK_PATH }}
+              value: {{ .Values.env.STORAGE_DISK_PATH | quote }}
             - name: DB_HOST
-              value: {{ .Values.env.DB_HOST }}
+              value: {{ .Values.env.DB_HOST | quote }}
             - name: DB_PORT
               value: {{ .Values.env.DB_PORT | quote }}
             - name: DB_NAME
-              value: {{ .Values.env.DB_NAME }}
+              value: {{ .Values.env.DB_NAME | quote }}
             - name: DB_USERNAME
-              value: {{ .Values.env.DB_USERNAME }}
+              value: {{ .Values.env.DB_USERNAME | quote }}
             - name: DB_PASSWORD
-              value: {{ .Values.env.DB_PASSWORD }}
+              value: {{ .Values.env.DB_PASSWORD | quote }}
             - name: REDIS_HOST
-              value: {{ .Values.env.REDIS_HOST }}
+              value: {{ .Values.env.REDIS_HOST | quote }}
             - name: REDIS_PORT
               value: {{ .Values.env.REDIS_PORT | quote }}
             - name: S3_ENDPOINT
-              value: {{ .Values.env.S3_ENDPOINT }}
+              value: {{ .Values.env.S3_ENDPOINT | quote }}
             - name: S3_ACCESS_KEY
-              value: {{ .Values.env.S3_ACCESS_KEY }}
+              value: {{ .Values.env.S3_ACCESS_KEY | quote }}
             - name: S3_SECRET_KEY
-              value: {{ .Values.env.S3_SECRET_KEY }}
+              value: {{ .Values.env.S3_SECRET_KEY | quote }}
             - name: S3_BUCKET_NAME
-              value: {{ .Values.env.S3_BUCKET_NAME }}
+              value: {{ .Values.env.S3_BUCKET_NAME | quote }}
             - name: S3_REGION
-              value: {{ .Values.env.S3_REGION }}
+              value: {{ .Values.env.S3_REGION | quote }}
             - name: S3_PATH_STYLE_ACCESS_ENABLED
               value: {{ .Values.env.S3_PATH_STYLE_ACCESS_ENABLED | quote }}
             - name: S3_AUTO_CREATE_BUCKET
               value: {{ .Values.env.S3_AUTO_CREATE_BUCKET | quote }}
             - name: JWT_SECRET
-              value: {{ .Values.env.JWT_SECRET }}
+              value: {{ .Values.env.JWT_SECRET | quote }}
             - name: JWT_ACCESS_TOKEN_EXPIRATION
               value: {{ .Values.env.JWT_ACCESS_TOKEN_EXPIRATION | quote }}
             - name: JWT_REFRESH_TOKEN_EXPIRATION
               value: {{ .Values.env.JWT_REFRESH_TOKEN_EXPIRATION | quote }}
             - name: WS_ALLOWED_ORIGINS
-              value: {{ .Values.env.WS_ALLOWED_ORIGINS }}
+              value: {{ .Values.env.WS_ALLOWED_ORIGINS | quote }}
             - name: CORS_ALLOWED_ORIGINS
-              value: {{ .Values.env.CORS_ALLOWED_ORIGINS }}
+              value: {{ .Values.env.CORS_ALLOWED_ORIGINS | quote }}
+            {{- if .Values.federation.enabled }}
+            - name: FEDERATION_ENABLED
+              value: "true"
+            - name: FEDERATION_CLUSTER_ID
+              value: {{ .Values.federation.clusterId | quote }}
+            - name: FEDERATION_CLUSTER_NAME
+              value: {{ .Values.federation.clusterName | quote }}
+            - name: FEDERATION_CLUSTER_URL
+              value: {{ .Values.federation.clusterUrl | quote }}
+            {{- end }}
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
           volumeMounts:

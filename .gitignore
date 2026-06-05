@@ -32,6 +32,11 @@ desktop.ini
 docker-compose.override.yml
 docker-compose.disk.yml
 docker-compose.production.yml
+podman-compose.production.yml
+deploy/federation/cluster.yml
+deploy/federation/peers.yml
+helm/values-production.yaml
+helm/values-federation.yaml
 
 # Runtime data
 logs/

@@ -1,0 +1,9 @@
+# Пример списка federation peers.
+# Скопируйте в deploy/federation/peers.yml и замените значения.
+# Наличие peer в этом файле не включает межкластерную доставку сообщений.
+
+peers:
+  - id: "cluster-b"
+    name: "Messenger Cluster B"
+    url: "https://chat-b.example.com"
+    enabled: true

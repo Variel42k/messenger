@@ -1,0 +1,14 @@
+# Пример federation topology metadata.
+# Используйте вместе с values-production.example.yaml:
+#   helm upgrade --install messenger ./helm -n messenger \
+#     -f helm/values-production.example.yaml \
+#     -f helm/values-federation.example.yaml
+#
+# Это не реализует backend federation protocol. Файл только добавляет
+# topology metadata для configuration inventory и health validation.
+
+federation:
+  enabled: true
+  clusterId: "cluster-a"
+  clusterName: "Messenger Cluster A"
+  clusterUrl: "https://chat-a.example.com"

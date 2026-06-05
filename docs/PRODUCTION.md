@@ -4,6 +4,8 @@
 
 Основной `docker-compose.yml` остаётся удобным для разработки. Production-примеры добавлены как opt-in templates и не активны, пока администратор не скопирует и не отредактирует их вручную.
 
+Сравнение production paths и Mermaid-графы находятся в [DEPLOYMENT_MATRIX.md](DEPLOYMENT_MATRIX.md). Podman описан в [PODMAN.md](PODMAN.md), Kubernetes Helm - в [KUBERNETES.md](KUBERNETES.md).
+
 ## Список проблем
 
 Перед публичным production нужно закрыть следующие вопросы:
@@ -25,7 +27,11 @@
 В репозиторий добавлены неактивные templates:
 
 - `docker-compose.production.yml.example` - standalone production-like Compose template.
+- `podman-compose.production.yml.example` - standalone production-like Podman Compose template.
 - `.env.production.example` - production-oriented environment template.
+- `helm/values-production.example.yaml` - production values для Helm.
+- `helm/values-federation.example.yaml` - federation topology override для Helm.
+- `deploy/federation/*.example.yml` - federation inventory examples.
 - `deploy/nginx/messenger.conf.example` - пример Nginx HTTPS reverse proxy.
 - `deploy/caddy/Caddyfile.example` - пример Caddy HTTPS reverse proxy.
 - `deploy/systemd/messenger.service.example` - systemd unit для Compose startup.
@@ -320,6 +326,29 @@ docker compose -f docker-compose.production.yml up -d --build
 
 ```bash
 docker compose -f docker-compose.production.yml -f docker-compose.disk.yml up -d
+```
+
+## Federation topology
+
+Federation в текущем этапе - это подготовка topology/trust inventory и health validation между несколькими кластерами. Это не backend federation protocol и не межкластерная доставка сообщений.
+
+```mermaid
+flowchart LR
+    A[Cluster A] --> InvA[cluster.yml + peers.yml]
+    B[Cluster B] --> InvB[cluster.yml + peers.yml]
+    C[Cluster C] --> InvC[cluster.yml + peers.yml]
+    InvA --> Validate[federation-validate]
+    InvB --> Validate
+    InvC --> Validate
+    Validate --> Health[HTTPS /actuator/health checks]
+```
+
+Команды:
+
+```bash
+./scripts/messengerctl.sh federation-init --cluster-id cluster-a --cluster-url https://chat-a.example.com
+./scripts/messengerctl.sh federation-add-peer --cluster-id cluster-b --cluster-url https://chat-b.example.com
+./scripts/messengerctl.sh federation-validate
 ```
 
 ## Production checklist

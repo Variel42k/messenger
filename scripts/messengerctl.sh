@@ -20,6 +20,19 @@ TAIL="100"
 HEALTH_URL="http://localhost:8080/actuator/health"
 WEB_URL="http://localhost:3001"
 DISK_COMPOSE_FILE="docker-compose.disk.yml"
+RUNTIME="docker"
+PROFILE="dev"
+COMPOSE_FILE=""
+NAMESPACE="messenger"
+RELEASE="messenger"
+VALUES_FILE=""
+CLUSTER_ID=""
+CLUSTER_NAME=""
+CLUSTER_URL=""
+PEER_FILE=""
+FEDERATION_DIR="deploy/federation"
+FEDERATION_CLUSTER_FILE=""
+FEDERATION_PEERS_FILE=""
 
 if [[ $# -gt 0 ]]; then
   shift
@@ -63,6 +76,91 @@ run_privileged() {
   fi
 }
 
+container_engine() {
+  case "$RUNTIME" in
+    docker) printf 'docker\n' ;;
+    podman) printf 'podman\n' ;;
+    kubernetes) die "Container engine commands are not used for --runtime kubernetes" ;;
+    *) die "Unsupported runtime: $RUNTIME" ;;
+  esac
+}
+
+compose_command() {
+  case "$RUNTIME" in
+    docker)
+      if [[ "$DRY_RUN" != "true" ]]; then
+        command -v docker >/dev/null 2>&1 || die "docker is required for --runtime docker"
+        docker compose version >/dev/null 2>&1 || die "Docker Compose plugin is required for --runtime docker"
+      fi
+      printf 'docker compose\n'
+      ;;
+    podman)
+      if [[ "$DRY_RUN" == "true" ]] && ! command -v podman >/dev/null 2>&1 && ! command -v podman-compose >/dev/null 2>&1; then
+        printf 'podman compose\n'
+        return 0
+      fi
+      command -v podman >/dev/null 2>&1 || die "podman is required for --runtime podman"
+      if podman compose version >/dev/null 2>&1; then
+        printf 'podman compose\n'
+      elif command -v podman-compose >/dev/null 2>&1; then
+        printf 'podman-compose\n'
+      else
+        die "podman compose or podman-compose is required for --runtime podman"
+      fi
+      ;;
+    kubernetes)
+      die "Compose command is not available for --runtime kubernetes"
+      ;;
+    *) die "Unsupported runtime: $RUNTIME" ;;
+  esac
+}
+
+selected_compose_file() {
+  if [[ -n "$COMPOSE_FILE" ]]; then
+    printf '%s\n' "$COMPOSE_FILE"
+    return 0
+  fi
+  if [[ "$PROFILE" == "production" ]]; then
+    case "$RUNTIME" in
+      docker)
+        if [[ -f "$PROJECT_DIR/docker-compose.production.yml" ]]; then
+          printf '%s\n' "$PROJECT_DIR/docker-compose.production.yml"
+        else
+          log_warn "docker-compose.production.yml not found; using docker-compose.production.yml.example"
+          printf '%s\n' "$PROJECT_DIR/docker-compose.production.yml.example"
+        fi
+        ;;
+      podman)
+        if [[ -f "$PROJECT_DIR/podman-compose.production.yml" ]]; then
+          printf '%s\n' "$PROJECT_DIR/podman-compose.production.yml"
+        else
+          log_warn "podman-compose.production.yml not found; using podman-compose.production.yml.example"
+          printf '%s\n' "$PROJECT_DIR/podman-compose.production.yml.example"
+        fi
+        ;;
+      *) die "Compose file selection is not available for --runtime $RUNTIME" ;;
+    esac
+  else
+    printf '%s\n' "$PROJECT_DIR/docker-compose.yml"
+  fi
+}
+
+compose_args() {
+  local cmd compose_file
+  cmd="$(compose_command)"
+  compose_file="$(selected_compose_file)"
+  # shellcheck disable=SC2206
+  local args=($cmd)
+  if [[ "$RUNTIME" == "docker" ]]; then
+    args+=(--project-directory "$PROJECT_DIR")
+  fi
+  args+=(-f "$compose_file")
+  if [[ -f "$PROJECT_DIR/$DISK_COMPOSE_FILE" ]]; then
+    args+=(-f "$PROJECT_DIR/$DISK_COMPOSE_FILE")
+  fi
+  printf '%s\n' "${args[@]}"
+}
+
 detect_project_dir() {
   if [[ -n "$PROJECT_DIR" ]]; then
     PROJECT_DIR="$(cd "$PROJECT_DIR" && pwd -P)"
@@ -80,21 +178,19 @@ detect_project_dir() {
   [[ -f "$PROJECT_DIR/docker-compose.yml" ]] || die "docker-compose.yml not found in $PROJECT_DIR"
   ENV_FILE="$PROJECT_DIR/.env"
   BACKUP_DIR="${BACKUP_DIR:-$PROJECT_DIR/backups}"
+  FEDERATION_CLUSTER_FILE="$PROJECT_DIR/$FEDERATION_DIR/cluster.yml"
+  FEDERATION_PEERS_FILE="${PEER_FILE:-$PROJECT_DIR/$FEDERATION_DIR/peers.yml}"
 }
 
 compose() {
-  local args=(docker compose --project-directory "$PROJECT_DIR" -f "$PROJECT_DIR/docker-compose.yml")
-  if [[ -f "$PROJECT_DIR/$DISK_COMPOSE_FILE" ]]; then
-    args+=(-f "$PROJECT_DIR/$DISK_COMPOSE_FILE")
-  fi
+  local args=()
+  mapfile -t args < <(compose_args)
   run_cmd "${args[@]}" "$@"
 }
 
 compose_capture() {
-  local args=(docker compose --project-directory "$PROJECT_DIR" -f "$PROJECT_DIR/docker-compose.yml")
-  if [[ -f "$PROJECT_DIR/$DISK_COMPOSE_FILE" ]]; then
-    args+=(-f "$PROJECT_DIR/$DISK_COMPOSE_FILE")
-  fi
+  local args=()
+  mapfile -t args < <(compose_args)
   "${args[@]}" "$@"
 }
 
@@ -152,6 +248,10 @@ wait_for_health() {
   local attempts="${2:-60}"
   local delay="${3:-5}"
   local i
+  if [[ "$DRY_RUN" == "true" ]]; then
+    log_info "Would check backend health: $url"
+    return 0
+  fi
   for ((i=1; i<=attempts; i++)); do
     if command -v curl >/dev/null 2>&1; then
       if curl -fsS "$url" >/dev/null 2>&1; then
@@ -184,15 +284,21 @@ check_web() {
 }
 
 check_postgres() {
-  docker exec messenger-postgres pg_isready -U "${POSTGRES_USER:-postgres}" -d "${POSTGRES_DB:-messenger}" >/dev/null 2>&1
+  local engine
+  engine="$(container_engine)"
+  "$engine" exec messenger-postgres pg_isready -U "${POSTGRES_USER:-postgres}" -d "${POSTGRES_DB:-messenger}" >/dev/null 2>&1
 }
 
 check_redis() {
-  [[ "$(docker exec messenger-redis redis-cli ping 2>/dev/null || true)" == "PONG" ]]
+  local engine
+  engine="$(container_engine)"
+  [[ "$("$engine" exec messenger-redis redis-cli ping 2>/dev/null || true)" == "PONG" ]]
 }
 
 check_localstack() {
-  docker exec messenger-localstack awslocal s3 ls >/dev/null 2>&1 || docker exec messenger-localstack curl -fsS http://localhost:4566/_localstack/health >/dev/null 2>&1
+  local engine
+  engine="$(container_engine)"
+  "$engine" exec messenger-localstack awslocal s3 ls >/dev/null 2>&1 || "$engine" exec messenger-localstack curl -fsS http://localhost:4566/_localstack/health >/dev/null 2>&1
 }
 
 compose_project_name() {
@@ -209,20 +315,24 @@ volume_name() {
 
 backup_postgres() {
   local dest="$1"
+  local engine
+  engine="$(container_engine)"
   log_info "Backing up PostgreSQL"
   if [[ "$DRY_RUN" == "true" ]]; then
     log_info "Would write PostgreSQL dump to $dest"
     return 0
   fi
-  if ! docker ps --format '{{.Names}}' | grep -qx 'messenger-postgres'; then
+  if ! "$engine" ps --format '{{.Names}}' | grep -qx 'messenger-postgres'; then
     compose up -d postgres
   fi
-  docker exec -e PGPASSWORD="${POSTGRES_PASSWORD:-password}" messenger-postgres \
+  "$engine" exec -e PGPASSWORD="${POSTGRES_PASSWORD:-password}" messenger-postgres \
     pg_dump -U "${POSTGRES_USER:-postgres}" -d "${POSTGRES_DB:-messenger}" > "$dest"
 }
 
 restore_postgres() {
   local dump="$1"
+  local engine
+  engine="$(container_engine)"
   [[ -f "$dump" ]] || die "PostgreSQL dump not found in backup"
   log_warn "Restoring PostgreSQL will overwrite current database contents."
   confirm "Restore PostgreSQL database from backup?" || die "Restore cancelled"
@@ -232,14 +342,14 @@ restore_postgres() {
   fi
   compose up -d postgres
   sleep 5
-  docker exec -e PGPASSWORD="${POSTGRES_PASSWORD:-password}" messenger-postgres \
+  "$engine" exec -e PGPASSWORD="${POSTGRES_PASSWORD:-password}" messenger-postgres \
     psql -U "${POSTGRES_USER:-postgres}" -d postgres -v ON_ERROR_STOP=1 \
     -c "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname='${POSTGRES_DB:-messenger}' AND pid <> pg_backend_pid();" >/dev/null
-  docker exec -e PGPASSWORD="${POSTGRES_PASSWORD:-password}" messenger-postgres \
+  "$engine" exec -e PGPASSWORD="${POSTGRES_PASSWORD:-password}" messenger-postgres \
     dropdb -U "${POSTGRES_USER:-postgres}" --if-exists "${POSTGRES_DB:-messenger}"
-  docker exec -e PGPASSWORD="${POSTGRES_PASSWORD:-password}" messenger-postgres \
+  "$engine" exec -e PGPASSWORD="${POSTGRES_PASSWORD:-password}" messenger-postgres \
     createdb -U "${POSTGRES_USER:-postgres}" "${POSTGRES_DB:-messenger}"
-  docker exec -i -e PGPASSWORD="${POSTGRES_PASSWORD:-password}" messenger-postgres \
+  "$engine" exec -i -e PGPASSWORD="${POSTGRES_PASSWORD:-password}" messenger-postgres \
     psql -U "${POSTGRES_USER:-postgres}" -d "${POSTGRES_DB:-messenger}" -v ON_ERROR_STOP=1 < "$dump"
 }
 
@@ -252,6 +362,8 @@ disk_source_path() {
 backup_uploads() {
   local dest="$1"
   local host_path=""
+  local engine
+  engine="$(container_engine)"
   host_path="$(disk_source_path || true)"
   log_info "Backing up uploads"
   if [[ "$DRY_RUN" == "true" ]]; then
@@ -261,29 +373,33 @@ backup_uploads() {
   if [[ -n "$host_path" && -d "$host_path" ]]; then
     tar -czf "$dest" -C "$host_path" .
   else
-    docker run --rm -v "$(volume_name files_data):/data:ro" -v "$(dirname "$dest"):/backup" alpine:3.20 \
+    "$engine" run --rm -v "$(volume_name files_data):/data:ro" -v "$(dirname "$dest"):/backup" alpine:3.20 \
       sh -c "cd /data && tar -czf /backup/$(basename "$dest") ."
   fi
 }
 
 backup_localstack() {
   local dest="$1"
+  local engine
+  engine="$(container_engine)"
   if [[ "$DRY_RUN" == "true" ]]; then
     log_info "Would write LocalStack archive to $dest"
     return 0
   fi
-  docker run --rm -v "$(volume_name localstack_data):/data:ro" -v "$(dirname "$dest"):/backup" alpine:3.20 \
+  "$engine" run --rm -v "$(volume_name localstack_data):/data:ro" -v "$(dirname "$dest"):/backup" alpine:3.20 \
     sh -c "cd /data && tar -czf /backup/$(basename "$dest") ." || log_warn "LocalStack backup skipped"
 }
 
 backup_redis() {
   local dest="$1"
+  local engine
+  engine="$(container_engine)"
   log_info "Backing up Redis volume"
   if [[ "$DRY_RUN" == "true" ]]; then
     log_info "Would write Redis archive to $dest"
     return 0
   fi
-  docker run --rm -v "$(volume_name redis_data):/data:ro" -v "$(dirname "$dest"):/backup" alpine:3.20 \
+  "$engine" run --rm -v "$(volume_name redis_data):/data:ro" -v "$(dirname "$dest"):/backup" alpine:3.20 \
     sh -c "cd /data && tar -czf /backup/$(basename "$dest") ." || log_warn "Redis backup skipped"
 }
 
@@ -303,7 +419,7 @@ backup_metadata() {
     printf 'project_dir=%s\n' "$PROJECT_DIR"
     printf 'git_commit=%s\n' "$(git -C "$PROJECT_DIR" rev-parse HEAD 2>/dev/null || printf 'unknown')"
     printf '\n[docker ps]\n'
-    docker ps --format 'table {{.Names}}\t{{.Image}}\t{{.Status}}\t{{.Ports}}' 2>/dev/null || true
+    "$(container_engine)" ps --format 'table {{.Names}}\t{{.Image}}\t{{.Status}}\t{{.Ports}}' 2>/dev/null || true
     printf '\n[docker compose ps]\n'
     compose_capture ps 2>/dev/null || true
   } > "$dest"
@@ -312,7 +428,7 @@ backup_metadata() {
 create_backup_archive() {
   require_command tar
   require_command gzip
-  require_command docker
+  require_command "$(container_engine)"
   require_command date
   load_env
   mkdir -p "$BACKUP_DIR"
@@ -344,6 +460,8 @@ create_backup_archive() {
 
 restore_uploads_archive() {
   local archive="$1"
+  local engine
+  engine="$(container_engine)"
   [[ -f "$archive" ]] || return 0
   log_warn "Restoring uploads will overwrite current uploads/files_data."
   confirm "Restore uploads from backup?" || die "Restore cancelled"
@@ -357,7 +475,7 @@ restore_uploads_archive() {
     find "$host_path" -mindepth 1 -maxdepth 1 -exec rm -rf {} +
     tar -xzf "$archive" -C "$host_path"
   else
-    docker run --rm -v "$(volume_name files_data):/data" -v "$(dirname "$archive"):/backup" alpine:3.20 \
+    "$engine" run --rm -v "$(volume_name files_data):/data" -v "$(dirname "$archive"):/backup" alpine:3.20 \
       sh -c "rm -rf /data/* /data/.[!.]* /data/..?* 2>/dev/null || true; tar -xzf /backup/$(basename "$archive") -C /data"
   fi
 }
@@ -365,6 +483,27 @@ restore_uploads_archive() {
 list_disks() {
   require_command lsblk
   lsblk -o NAME,SIZE,TYPE,FSTYPE,MOUNTPOINT,MODEL
+}
+
+disk_status() {
+  log_info "Disk storage compose file: $PROJECT_DIR/$DISK_COMPOSE_FILE"
+  if [[ -f "$PROJECT_DIR/$DISK_COMPOSE_FILE" ]]; then
+    sed -n '1,120p' "$PROJECT_DIR/$DISK_COMPOSE_FILE"
+  else
+    log_warn "$DISK_COMPOSE_FILE not found"
+  fi
+  local host_path=""
+  host_path="$(disk_source_path || true)"
+  if [[ -n "$host_path" ]]; then
+    log_info "Configured uploads host path: $host_path"
+    if command -v findmnt >/dev/null 2>&1; then
+      findmnt "$host_path" || log_warn "$host_path is not a mount point"
+    fi
+    [[ -d "$host_path" ]] && du -sh "$host_path" || log_warn "$host_path does not exist"
+  fi
+  if [[ -f "$ENV_FILE" ]]; then
+    grep -E '^(STORAGE_PROVIDER|STORAGE_DISK_PATH)=' "$ENV_FILE" || true
+  fi
 }
 
 write_compose_override_for_disk() {
@@ -402,6 +541,19 @@ install_disk() {
   [[ -n "$DEVICE" ]] || die "disk-install requires --device /dev/sdX"
   [[ -n "$MOUNT_POINT" ]] || die "disk-install requires --mount-point /srv/messenger/uploads"
   [[ "$FS_TYPE" == "ext4" || "$FS_TYPE" == "xfs" ]] || die "--fs must be ext4 or xfs"
+  if [[ "$DRY_RUN" == "true" ]]; then
+    command -v lsblk >/dev/null 2>&1 && list_disks || log_warn "lsblk is not available; skipping disk list in dry-run"
+    log_info "Would verify block device: $DEVICE"
+    log_info "Would verify device is not mounted"
+    log_info "Would format $DEVICE as $FS_TYPE only with --force and confirmation"
+    log_info "Would mount $DEVICE at $MOUNT_POINT and add /etc/fstab entry by UUID"
+    write_compose_override_for_disk "$MOUNT_POINT"
+    set_env_var "STORAGE_PROVIDER" "disk"
+    set_env_var "STORAGE_DISK_PATH" "/data/uploads"
+    compose up -d server worker
+    wait_for_health
+    return 0
+  fi
   require_command lsblk
   require_command findmnt
   require_command mount
@@ -449,6 +601,16 @@ install_disk() {
 
 remove_disk() {
   [[ -n "$MOUNT_POINT" ]] || die "disk-remove requires --mount-point"
+  if [[ "$DRY_RUN" == "true" ]]; then
+    log_info "Would verify mount point: $MOUNT_POINT"
+    compose stop
+    log_info "Would create uploads backup before disk removal"
+    log_info "Would disable $DISK_COMPOSE_FILE"
+    log_info "Would comment /etc/fstab entry and unmount $MOUNT_POINT"
+    compose up -d
+    wait_for_health
+    return 0
+  fi
   require_command findmnt
   require_command umount
   if ! findmnt "$MOUNT_POINT" >/dev/null 2>&1; then
@@ -493,10 +655,173 @@ remove_disk() {
   wait_for_health
 }
 
+ensure_federation_dir() {
+  if [[ "$DRY_RUN" == "true" ]]; then
+    log_info "Would create $PROJECT_DIR/$FEDERATION_DIR"
+  else
+    mkdir -p "$PROJECT_DIR/$FEDERATION_DIR"
+  fi
+}
+
+yaml_quote() {
+  printf '%s' "$1" | sed 's/"/\\"/g'
+}
+
+federation_init() {
+  [[ -n "$CLUSTER_ID" ]] || die "federation-init requires --cluster-id"
+  [[ -n "$CLUSTER_URL" ]] || die "federation-init requires --cluster-url"
+  local name="${CLUSTER_NAME:-$CLUSTER_ID}"
+  ensure_federation_dir
+  log_warn "Federation commands prepare topology/trust inventory and health validation only; backend federation protocol is not implemented here."
+  if [[ "$DRY_RUN" == "true" ]]; then
+    log_info "Would write $FEDERATION_CLUSTER_FILE and $FEDERATION_PEERS_FILE"
+    return 0
+  fi
+  cat > "$FEDERATION_CLUSTER_FILE" <<EOF
+cluster:
+  id: "$(yaml_quote "$CLUSTER_ID")"
+  name: "$(yaml_quote "$name")"
+  url: "$(yaml_quote "$CLUSTER_URL")"
+  mode: "config-topology-validation-only"
+  healthEndpoint: "/actuator/health"
+EOF
+  if [[ ! -f "$FEDERATION_PEERS_FILE" ]]; then
+    cat > "$FEDERATION_PEERS_FILE" <<'EOF'
+peers: []
+EOF
+  fi
+  log_info "Federation cluster inventory created: $FEDERATION_CLUSTER_FILE"
+}
+
+federation_add_peer() {
+  [[ -n "$CLUSTER_ID" ]] || die "federation-add-peer requires --cluster-id"
+  [[ -n "$CLUSTER_URL" ]] || die "federation-add-peer requires --cluster-url"
+  local name="${CLUSTER_NAME:-$CLUSTER_ID}"
+  ensure_federation_dir
+  if [[ "$DRY_RUN" == "true" ]]; then
+    log_info "Would add peer $CLUSTER_ID -> $CLUSTER_URL to $FEDERATION_PEERS_FILE"
+    return 0
+  fi
+  [[ -f "$FEDERATION_PEERS_FILE" ]] || printf 'peers:\n' > "$FEDERATION_PEERS_FILE"
+  if grep -q "id: \"$(yaml_quote "$CLUSTER_ID")\"" "$FEDERATION_PEERS_FILE"; then
+    die "Peer already exists: $CLUSTER_ID"
+  fi
+  cat >> "$FEDERATION_PEERS_FILE" <<EOF
+  - id: "$(yaml_quote "$CLUSTER_ID")"
+    name: "$(yaml_quote "$name")"
+    url: "$(yaml_quote "$CLUSTER_URL")"
+    enabled: true
+EOF
+  log_info "Federation peer added: $CLUSTER_ID"
+}
+
+federation_remove_peer() {
+  [[ -n "$CLUSTER_ID" ]] || die "federation-remove-peer requires --cluster-id"
+  [[ -f "$FEDERATION_PEERS_FILE" ]] || die "Peer file not found: $FEDERATION_PEERS_FILE"
+  if [[ "$DRY_RUN" == "true" ]]; then
+    log_info "Would remove peer $CLUSTER_ID from $FEDERATION_PEERS_FILE"
+    return 0
+  fi
+  local tmp
+  tmp="$(mktemp)"
+  awk -v id="$CLUSTER_ID" '
+    /^  - id: / {
+      skip = ($0 ~ "id: \"" id "\"")
+    }
+    skip && /^  - id: / && $0 !~ "id: \"" id "\"" { skip=0 }
+    !skip { print }
+  ' "$FEDERATION_PEERS_FILE" > "$tmp"
+  mv "$tmp" "$FEDERATION_PEERS_FILE"
+  log_info "Federation peer removed if it existed: $CLUSTER_ID"
+}
+
+federation_status() {
+  log_warn "Federation status is configuration/topology status only; it does not prove message federation."
+  if [[ -f "$FEDERATION_CLUSTER_FILE" ]]; then
+    log_info "Local cluster:"
+    sed -n '1,120p' "$FEDERATION_CLUSTER_FILE"
+  else
+    log_warn "Cluster file not found: $FEDERATION_CLUSTER_FILE"
+  fi
+  if [[ -f "$FEDERATION_PEERS_FILE" ]]; then
+    log_info "Peers:"
+    sed -n '1,200p' "$FEDERATION_PEERS_FILE"
+  else
+    log_warn "Peer file not found: $FEDERATION_PEERS_FILE"
+  fi
+}
+
+federation_peer_urls() {
+  [[ -f "$FEDERATION_PEERS_FILE" ]] || return 0
+  awk -F'"' '/^[[:space:]]+url: "/ { print $2 }' "$FEDERATION_PEERS_FILE"
+}
+
+federation_validate() {
+  command -v curl >/dev/null 2>&1 || command -v wget >/dev/null 2>&1 || die "curl or wget is required for federation validation"
+  federation_status
+  local url health_url failed=0
+  while IFS= read -r url; do
+    [[ -n "$url" ]] || continue
+    health_url="${url%/}/actuator/health"
+    if [[ "$DRY_RUN" == "true" ]]; then
+      log_info "Would validate peer health: $health_url"
+      continue
+    fi
+    if command -v curl >/dev/null 2>&1; then
+      curl -fsS "$health_url" >/dev/null && log_info "Peer health OK: $health_url" || { log_warn "Peer health failed: $health_url"; failed=1; }
+    else
+      wget -qO- "$health_url" >/dev/null && log_info "Peer health OK: $health_url" || { log_warn "Peer health failed: $health_url"; failed=1; }
+    fi
+  done < <(federation_peer_urls)
+  return "$failed"
+}
+
+federation_export() {
+  log_warn "Export contains topology/trust inventory only; it is not a backend federation protocol bundle."
+  if [[ "$DRY_RUN" == "true" ]]; then
+    log_info "Would export sanitized federation bundle"
+    return 0
+  fi
+  printf '# Messenger federation inventory export\n'
+  printf '# Generated: %s\n\n' "$(date -u '+%Y-%m-%dT%H:%M:%SZ')"
+  [[ -f "$FEDERATION_CLUSTER_FILE" ]] && sed -n '1,120p' "$FEDERATION_CLUSTER_FILE"
+  printf '\n'
+  [[ -f "$FEDERATION_PEERS_FILE" ]] && sed -n '1,200p' "$FEDERATION_PEERS_FILE"
+}
+
+runtime_doctor() {
+  case "$RUNTIME" in
+    docker)
+      require_command docker
+      docker info >/dev/null 2>&1 && log_info "Docker daemon is reachable" || log_warn "Docker daemon is not reachable"
+      docker compose version >/dev/null 2>&1 && log_info "Docker Compose plugin is available" || log_warn "Docker Compose plugin is missing"
+      compose_capture config >/dev/null 2>&1 && log_info "Docker Compose config is valid" || log_warn "Docker Compose config failed"
+      ;;
+    podman)
+      require_command podman
+      podman info >/dev/null 2>&1 && log_info "Podman is reachable" || log_warn "Podman is not reachable"
+      compose_command >/dev/null && log_info "Podman Compose command is available"
+      compose_capture config >/dev/null 2>&1 && log_info "Podman Compose config is valid" || log_warn "Podman Compose config failed"
+      ;;
+    kubernetes)
+      require_command kubectl
+      require_command helm
+      kubectl version --client >/dev/null 2>&1 && log_info "kubectl client is available" || log_warn "kubectl client check failed"
+      helm version >/dev/null 2>&1 && log_info "helm is available" || log_warn "helm check failed"
+      if [[ -n "$VALUES_FILE" ]]; then
+        helm template "$RELEASE" "$PROJECT_DIR/helm" -n "$NAMESPACE" -f "$VALUES_FILE" >/dev/null && log_info "Helm template is valid" || log_warn "Helm template failed"
+      else
+        helm template "$RELEASE" "$PROJECT_DIR/helm" -n "$NAMESPACE" >/dev/null && log_info "Helm template is valid" || log_warn "Helm template failed"
+      fi
+      ;;
+    *) die "Unsupported runtime: $RUNTIME" ;;
+  esac
+}
+
 doctor() {
   local failed=0
   log_info "Project: $PROJECT_DIR"
-  for cmd in docker git openssl tar gzip; do
+  for cmd in git openssl tar gzip; do
     if command -v "$cmd" >/dev/null 2>&1; then log_info "Found $cmd"; else log_warn "Missing $cmd"; failed=1; fi
   done
   if command -v curl >/dev/null 2>&1 || command -v wget >/dev/null 2>&1; then
@@ -508,11 +833,7 @@ doctor() {
   for cmd in lsblk findmnt mount umount; do
     command -v "$cmd" >/dev/null 2>&1 && log_info "Found $cmd" || log_warn "Missing $cmd (needed for disk commands)"
   done
-  if command -v docker >/dev/null 2>&1; then
-    docker info >/dev/null 2>&1 && log_info "Docker daemon is reachable" || { log_warn "Docker daemon is not reachable"; failed=1; }
-    docker compose version >/dev/null 2>&1 && log_info "Docker Compose plugin is available" || { log_warn "Docker Compose plugin is missing"; failed=1; }
-    compose_capture config >/dev/null 2>&1 && log_info "docker compose config is valid" || { log_warn "docker compose config failed"; failed=1; }
-  fi
+  runtime_doctor || failed=1
   if [[ -f "$ENV_FILE" ]]; then
     load_env
     log_info ".env exists"
@@ -528,9 +849,9 @@ doctor() {
   [[ -n "${CORS_ALLOWED_ORIGINS:-}" ]] && log_info "CORS_ALLOWED_ORIGINS=${CORS_ALLOWED_ORIGINS}" || log_warn "CORS_ALLOWED_ORIGINS is not set"
   [[ -n "${WS_ALLOWED_ORIGINS:-}" ]] && log_info "WS_ALLOWED_ORIGINS=${WS_ALLOWED_ORIGINS}" || log_warn "WS_ALLOWED_ORIGINS is not set"
   [[ -n "${STORAGE_PROVIDER:-}" ]] && log_info "STORAGE_PROVIDER=${STORAGE_PROVIDER}" || log_warn "STORAGE_PROVIDER is not set"
-  if command -v docker >/dev/null 2>&1 && docker info >/dev/null 2>&1; then
+  if [[ "$RUNTIME" != "kubernetes" ]] && command -v "$(container_engine)" >/dev/null 2>&1 && "$(container_engine)" info >/dev/null 2>&1; then
     log_info "Messenger volumes:"
-    docker volume ls --format '{{.Name}}' | grep -E '(^|_)((postgres|redis|localstack|files)_data)$' || log_warn "No Messenger data volumes found yet"
+    "$(container_engine)" volume ls --format '{{.Name}}' | grep -E '(^|_)((postgres|redis|localstack|files)_data)$' || log_warn "No Messenger data volumes found yet"
     check_postgres && log_info "PostgreSQL is ready" || log_warn "PostgreSQL is not ready"
     check_redis && log_info "Redis ping OK" || log_warn "Redis ping failed"
     if command -v curl >/dev/null 2>&1 || command -v wget >/dev/null 2>&1; then
@@ -547,6 +868,10 @@ doctor() {
 }
 
 post_start_checks() {
+  if [[ "$DRY_RUN" == "true" ]]; then
+    log_info "Would run post-start checks: compose ps, backend health, web-client, PostgreSQL, Redis, LocalStack/S3"
+    return 0
+  fi
   compose ps
   wait_for_health || return 1
   check_web && log_info "Web client is reachable: $WEB_URL" || log_warn "Web client is not reachable: $WEB_URL"
@@ -555,14 +880,66 @@ post_start_checks() {
   check_localstack && log_info "LocalStack/S3 check OK" || log_warn "LocalStack/S3 check failed. Logs: $SCRIPT_NAME logs --service localstack --tail 200"
 }
 
+k8s_values_args() {
+  if [[ -n "$VALUES_FILE" ]]; then
+    printf '%s\n' -f "$VALUES_FILE"
+  elif [[ "$PROFILE" == "production" && -f "$PROJECT_DIR/helm/values-production.example.yaml" ]]; then
+    printf '%s\n' -f "$PROJECT_DIR/helm/values-production.example.yaml"
+  fi
+}
+
+k8s_helm_upgrade() {
+  if [[ "$DRY_RUN" != "true" ]]; then
+    require_command helm
+    require_command kubectl
+  fi
+  local values=()
+  mapfile -t values < <(k8s_values_args)
+  if [[ "$DRY_RUN" == "true" ]]; then
+    log_info "+ kubectl create namespace $NAMESPACE --dry-run=client -o yaml"
+    log_info "+ kubectl apply -f -"
+  else
+    log_info "+ kubectl create namespace $NAMESPACE --dry-run=client -o yaml | kubectl apply -f -"
+    kubectl create namespace "$NAMESPACE" --dry-run=client -o yaml | kubectl apply -f -
+  fi
+  run_cmd helm upgrade --install "$RELEASE" "$PROJECT_DIR/helm" --namespace "$NAMESPACE" "${values[@]}"
+}
+
+k8s_status() {
+  if [[ "$DRY_RUN" != "true" ]]; then
+    require_command kubectl
+    require_command helm
+  fi
+  run_cmd helm status "$RELEASE" --namespace "$NAMESPACE"
+  run_cmd kubectl get pods,svc,ingress --namespace "$NAMESPACE" -l "app.kubernetes.io/instance=$RELEASE"
+}
+
+k8s_rollback() {
+  require_command helm
+  run_cmd helm rollback "$RELEASE" --namespace "$NAMESPACE"
+}
+
+k8s_logs() {
+  require_command kubectl
+  local selector="app.kubernetes.io/instance=$RELEASE"
+  run_cmd kubectl logs --namespace "$NAMESPACE" -l "$selector" --tail="$TAIL"
+}
+
 cmd_install() {
-  require_command docker
+  if [[ "$RUNTIME" == "kubernetes" ]]; then
+    k8s_helm_upgrade
+    k8s_status
+    return 0
+  fi
+  if [[ "$DRY_RUN" != "true" ]]; then
+    require_command "$(container_engine)"
+  fi
   require_command git
   require_command openssl
   require_command tar
   require_command gzip
   command -v curl >/dev/null 2>&1 || command -v wget >/dev/null 2>&1 || die "curl or wget is required"
-  docker compose version >/dev/null 2>&1 || die "Docker Compose plugin is required. Install 'docker compose'; legacy docker-compose is not supported."
+  compose_command >/dev/null
   ensure_env
   mkdir -p "$PROJECT_DIR/backups"
   compose build
@@ -575,6 +952,12 @@ cmd_install() {
 }
 
 cmd_update() {
+  if [[ "$RUNTIME" == "kubernetes" ]]; then
+    [[ "$NO_BACKUP" == "true" ]] || log_warn "Kubernetes backup is environment-specific; see docs/KUBERNETES.md before update."
+    k8s_helm_upgrade
+    k8s_status
+    return 0
+  fi
   [[ "$NO_BACKUP" == "true" ]] || create_backup_archive
   if [[ -d "$PROJECT_DIR/.git" ]]; then
     run_cmd git -C "$PROJECT_DIR" pull
@@ -636,19 +1019,27 @@ cmd_purge() {
 }
 
 cmd_status() {
+  if [[ "$RUNTIME" == "kubernetes" ]]; then
+    k8s_status
+    return 0
+  fi
   load_env
   compose ps
   wait_for_health "$HEALTH_URL" 1 1 >/dev/null 2>&1 && log_info "Backend health OK" || log_warn "Backend health failed"
   check_web && log_info "Web client reachable" || log_warn "Web client unavailable"
   log_info "STORAGE_PROVIDER=${STORAGE_PROVIDER:-unset}"
-  log_info "Docker volumes:"
-  docker system df -v 2>/dev/null | sed -n '/Local Volumes space usage:/,$p' || true
+  log_info "Container runtime volumes:"
+  "$(container_engine)" system df -v 2>/dev/null | sed -n '/Local Volumes space usage:/,$p' || true
   local host_path=""
   host_path="$(disk_source_path || true)"
   [[ -n "$host_path" && -d "$host_path" ]] && du -sh "$host_path" || true
 }
 
 cmd_logs() {
+  if [[ "$RUNTIME" == "kubernetes" ]]; then
+    k8s_logs
+    return 0
+  fi
   local target=()
   case "$SERVICE" in
     all) target=() ;;
@@ -659,15 +1050,30 @@ cmd_logs() {
 }
 
 cmd_restart() {
+  if [[ "$RUNTIME" == "kubernetes" ]]; then
+    require_command kubectl
+    run_cmd kubectl rollout restart deployment/"$RELEASE" --namespace "$NAMESPACE"
+    k8s_status
+    return 0
+  fi
   compose restart
   post_start_checks
 }
 
 cmd_stop() {
+  if [[ "$RUNTIME" == "kubernetes" ]]; then
+    run_cmd helm uninstall "$RELEASE" --namespace "$NAMESPACE"
+    return 0
+  fi
   compose stop
 }
 
 cmd_start() {
+  if [[ "$RUNTIME" == "kubernetes" ]]; then
+    k8s_helm_upgrade
+    k8s_status
+    return 0
+  fi
   compose up -d
   post_start_checks
 }
@@ -693,6 +1099,14 @@ cmd_help() {
   start         Запустить сервисы и выполнить health checks.
   disk-install  Отформатировать, смонтировать и настроить отдельный диск uploads.
   disk-remove   Отключить disk bind mount и отмонтировать uploads disk.
+  disk-list     Показать диски через lsblk.
+  disk-add      Alias для disk-install.
+  disk-status   Показать disk storage config и mount status.
+  runtime-doctor Проверить выбранный runtime: docker, podman или kubernetes.
+  podman-install, podman-update, podman-start, podman-stop
+  k8s-install, k8s-update, k8s-status, k8s-start, k8s-stop, k8s-rollback
+  federation-init, federation-add-peer, federation-remove-peer
+  federation-status, federation-validate, federation-export
   doctor        Проверить зависимости, compose config и health сервисов.
   help          Показать эту справку.
 
@@ -710,16 +1124,33 @@ cmd_help() {
   --tail N               Количество строк logs. По умолчанию: 100.
   --dry-run              Показать планируемые команды без опасных изменений.
   --keep-data            Принимается disk-remove; данные сохраняются по умолчанию.
+  --runtime docker|podman|kubernetes  Runtime. По умолчанию: docker.
+  --profile dev|production            Профиль deployment. По умолчанию: dev.
+  --compose-file FILE                 Явный compose-файл для Docker/Podman.
+  --namespace NAMESPACE               Kubernetes namespace. По умолчанию: messenger.
+  --release RELEASE                   Helm release. По умолчанию: messenger.
+  --values FILE                       Helm values file.
+  --cluster-id ID                     Federation cluster/peer id.
+  --cluster-name NAME                 Federation cluster/peer display name.
+  --cluster-url URL                   Federation cluster/peer base URL.
+  --peer-file FILE                    Federation peers file.
 
 Примеры:
   ./scripts/messengerctl.sh install
+  ./scripts/messengerctl.sh install --runtime docker --profile production --dry-run
+  ./scripts/messengerctl.sh install --runtime podman --profile production --dry-run
+  ./scripts/messengerctl.sh install --runtime kubernetes --namespace messenger --release messenger --values helm/values-production.example.yaml --dry-run
   ./scripts/messengerctl.sh update
   ./scripts/messengerctl.sh backup
   ./scripts/messengerctl.sh restore --file backups/messenger-backup-20260531-120000.tar.gz
   ./scripts/messengerctl.sh uninstall
   ./scripts/messengerctl.sh purge --force
   ./scripts/messengerctl.sh disk-install --device /dev/sdb --mount-point /srv/messenger/uploads --fs ext4 --force
+  ./scripts/messengerctl.sh disk-add --device /dev/sdb --mount-point /srv/messenger/uploads --fs ext4 --dry-run
   ./scripts/messengerctl.sh disk-remove --mount-point /srv/messenger/uploads
+  ./scripts/messengerctl.sh federation-init --cluster-id dev-a --cluster-url https://chat-a.example.com --dry-run
+  ./scripts/messengerctl.sh federation-add-peer --cluster-id dev-b --cluster-url https://chat-b.example.com --dry-run
+  ./scripts/messengerctl.sh federation-validate --dry-run
   ./scripts/messengerctl.sh logs --service server --tail 200
 EOF
 }
@@ -732,6 +1163,16 @@ parse_args() {
       --no-backup) NO_BACKUP=true; shift ;;
       --dry-run) DRY_RUN=true; shift ;;
       --keep-data) KEEP_DATA=true; shift ;;
+      --runtime) RUNTIME="${2:-}"; shift 2 ;;
+      --profile) PROFILE="${2:-}"; shift 2 ;;
+      --compose-file) COMPOSE_FILE="${2:-}"; shift 2 ;;
+      --namespace) NAMESPACE="${2:-}"; shift 2 ;;
+      --release) RELEASE="${2:-}"; shift 2 ;;
+      --values) VALUES_FILE="${2:-}"; shift 2 ;;
+      --cluster-id) CLUSTER_ID="${2:-}"; shift 2 ;;
+      --cluster-name) CLUSTER_NAME="${2:-}"; shift 2 ;;
+      --cluster-url) CLUSTER_URL="${2:-}"; shift 2 ;;
+      --peer-file) PEER_FILE="${2:-}"; shift 2 ;;
       --backup-dir) BACKUP_DIR="${2:-}"; shift 2 ;;
       --project-dir) PROJECT_DIR="${2:-}"; shift 2 ;;
       --file) BACKUP_FILE="${2:-}"; shift 2 ;;
@@ -748,20 +1189,42 @@ parse_args() {
 main() {
   parse_args "$@"
   detect_project_dir
+  case "$RUNTIME" in docker|podman|kubernetes) ;; *) die "--runtime must be docker, podman or kubernetes" ;; esac
+  case "$PROFILE" in dev|production) ;; *) die "--profile must be dev or production" ;; esac
   case "$COMMAND" in
     install) cmd_install ;;
+    podman-install) RUNTIME="podman"; cmd_install ;;
+    k8s-install) RUNTIME="kubernetes"; cmd_install ;;
     update) cmd_update ;;
+    podman-update) RUNTIME="podman"; cmd_update ;;
+    k8s-update) RUNTIME="kubernetes"; cmd_update ;;
     backup) create_backup_archive ;;
     restore) cmd_restore ;;
     uninstall) cmd_uninstall ;;
     purge) cmd_purge ;;
     status) cmd_status ;;
+    k8s-status) RUNTIME="kubernetes"; cmd_status ;;
     logs) cmd_logs ;;
     restart) cmd_restart ;;
     stop) cmd_stop ;;
+    podman-stop) RUNTIME="podman"; cmd_stop ;;
+    k8s-stop) RUNTIME="kubernetes"; cmd_stop ;;
     start) cmd_start ;;
+    podman-start) RUNTIME="podman"; cmd_start ;;
+    k8s-start) RUNTIME="kubernetes"; cmd_start ;;
+    k8s-rollback) RUNTIME="kubernetes"; k8s_rollback ;;
+    runtime-doctor) runtime_doctor ;;
+    disk-list) list_disks ;;
+    disk-add) install_disk ;;
     disk-install) install_disk ;;
     disk-remove) remove_disk ;;
+    disk-status) disk_status ;;
+    federation-init) federation_init ;;
+    federation-add-peer) federation_add_peer ;;
+    federation-remove-peer) federation_remove_peer ;;
+    federation-status) federation_status ;;
+    federation-validate) federation_validate ;;
+    federation-export) federation_export ;;
     doctor) doctor ;;
     help|-h|--help) cmd_help ;;
     *) cmd_help; die "Unknown command: $COMMAND" ;;

@@ -4,6 +4,8 @@
 
 Для повседневной эксплуатации используйте `scripts/messengerctl.sh`; подробности в [OPERATIONS.md](OPERATIONS.md).
 
+Для выбора runtime смотрите [DEPLOYMENT_MATRIX.md](DEPLOYMENT_MATRIX.md). Отдельные инструкции: [PODMAN.md](PODMAN.md) и [KUBERNETES.md](KUBERNETES.md).
+
 ## Требования к серверу
 
 Целевая платформа:
@@ -162,6 +164,9 @@ WS_ALLOWED_ORIGINS=https://chat.example.com
 
 ```bash
 ./scripts/messengerctl.sh install
+./scripts/messengerctl.sh install --runtime docker --profile production
+./scripts/messengerctl.sh install --runtime podman --profile production
+./scripts/messengerctl.sh install --runtime kubernetes --namespace messenger --release messenger --values helm/values-production.example.yaml
 ```
 
 Через Docker Compose:

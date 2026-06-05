@@ -12,6 +12,16 @@
 
 Скрипт использует `docker compose`, по умолчанию не удаляет Docker volumes, запрашивает подтверждение для опасных операций и создаёт `docker-compose.disk.yml` для выделенного disk storage вместо изменения пользовательского `docker-compose.override.yml`.
 
+Скрипт также поддерживает runtime abstraction:
+
+```bash
+./scripts/messengerctl.sh runtime-doctor --runtime docker
+./scripts/messengerctl.sh runtime-doctor --runtime podman --profile production
+./scripts/messengerctl.sh runtime-doctor --runtime kubernetes --namespace messenger --release messenger --values helm/values-production.example.yaml
+```
+
+Сравнение Docker Compose, Podman Compose и Kubernetes Helm описано в [DEPLOYMENT_MATRIX.md](DEPLOYMENT_MATRIX.md).
+
 ## Установка
 
 ```bash
@@ -154,7 +164,9 @@ lsblk -o NAME,SIZE,TYPE,FSTYPE,MOUNTPOINT,MODEL
 ## Подключение отдельного диска под uploads
 
 ```bash
+./scripts/messengerctl.sh disk-list
 ./scripts/messengerctl.sh disk-install --device /dev/sdb --mount-point /srv/messenger/uploads --fs ext4 --force
+./scripts/messengerctl.sh disk-status
 ```
 
 Команда показывает диски, проверяет устройство, отказывается форматировать без `--force`, запрашивает подтверждение, создаёт файловую систему, монтирует диск, добавляет `/etc/fstab` по UUID, создаёт `docker-compose.disk.yml`, обновляет `.env`, перезапускает `server` и `worker`, затем проверяет backend health.
@@ -220,3 +232,15 @@ tar -czf diagnostics/messenger-diagnostics-$(date +%Y%m%d-%H%M%S).tar.gz diagnos
 ```
 
 Перед передачей архива наружу проверьте содержимое. Логи и `.env` могут содержать чувствительные данные.
+
+## Federation inventory
+
+Federation-команды управляют только topology/trust inventory и health validation. Они не реализуют backend federation protocol и не включают межкластерную доставку сообщений.
+
+```bash
+./scripts/messengerctl.sh federation-init --cluster-id cluster-a --cluster-url https://chat-a.example.com
+./scripts/messengerctl.sh federation-add-peer --cluster-id cluster-b --cluster-url https://chat-b.example.com
+./scripts/messengerctl.sh federation-status
+./scripts/messengerctl.sh federation-validate
+./scripts/messengerctl.sh federation-export
+```

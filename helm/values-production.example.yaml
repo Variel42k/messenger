@@ -1,0 +1,93 @@
+# Production values example для Messenger Helm chart.
+# Перед изменением скопируйте файл и храните реальные secrets вне Git.
+
+replicaCount: 2
+
+image:
+  repository: registry.example.com/messenger-server
+  pullPolicy: IfNotPresent
+  tag: "latest"
+
+resources:
+  limits:
+    cpu: "1"
+    memory: 2Gi
+  requests:
+    cpu: 500m
+    memory: 1Gi
+
+podSecurityContext:
+  fsGroup: 1000
+
+securityContext:
+  allowPrivilegeEscalation: false
+  runAsNonRoot: true
+  runAsUser: 1000
+  capabilities:
+    drop:
+      - ALL
+
+service:
+  type: ClusterIP
+  port: 8080
+
+ingress:
+  enabled: true
+  className: nginx
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-body-size: "100m"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+  hosts:
+    - host: chat.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: messenger-tls
+      hosts:
+        - chat.example.com
+
+postgresql:
+  enabled: false
+
+redis:
+  enabled: false
+
+objectStorage:
+  enabled: true
+  endpoint: "https://minio.example.com"
+  accessKey: "replace-with-secret-manager-value"
+  secretKey: "replace-with-secret-manager-value"
+  bucketName: "messenger-files"
+  region: "us-east-1"
+  pathStyleAccessEnabled: "true"
+  autoCreateBucket: "false"
+
+env:
+  STORAGE_PROVIDER: "s3"
+  STORAGE_DISK_PATH: "/data/uploads"
+  DB_HOST: "postgres.example.internal"
+  DB_PORT: "5432"
+  DB_NAME: "messenger"
+  DB_USERNAME: "messenger"
+  DB_PASSWORD: "replace-with-secret-manager-value"
+  REDIS_HOST: "redis.example.internal"
+  REDIS_PORT: "6379"
+  S3_ENDPOINT: "https://minio.example.com"
+  S3_ACCESS_KEY: "replace-with-secret-manager-value"
+  S3_SECRET_KEY: "replace-with-secret-manager-value"
+  S3_BUCKET_NAME: "messenger-files"
+  S3_REGION: "us-east-1"
+  S3_PATH_STYLE_ACCESS_ENABLED: "true"
+  S3_AUTO_CREATE_BUCKET: "false"
+  JWT_SECRET: "replace-with-openssl-rand-base64-64"
+  JWT_ACCESS_TOKEN_EXPIRATION: "900000"
+  JWT_REFRESH_TOKEN_EXPIRATION: "604800000"
+  WS_ALLOWED_ORIGINS: "https://chat.example.com"
+  CORS_ALLOWED_ORIGINS: "https://chat.example.com"
+
+federation:
+  enabled: false
+  clusterId: ""
+  clusterName: ""
+  clusterUrl: ""

@@ -79,6 +79,9 @@ cd server
 ## Документация
 
 - [Развертывание](docs/DEPLOYMENT.md): требования к серверу, `.env`, Docker Compose deployment, health checks, storage modes, logs и troubleshooting.
+- [Матрица развертывания](docs/DEPLOYMENT_MATRIX.md): сравнение Docker Compose, Podman Compose и Kubernetes Helm с Mermaid-графами.
+- [Podman](docs/PODMAN.md): production-like запуск через Podman Compose, rootless/SELinux notes и systemd.
+- [Kubernetes](docs/KUBERNETES.md): Helm deployment, production values, update и rollback.
 - [Эксплуатация](docs/OPERATIONS.md): install, update, stop, restart, uninstall, purge, rollback, диагностика и операции с дисками через скрипт.
 - [Backup и restore](docs/BACKUP_RESTORE.md): состав backup, ручной backup, backup через скрипт, восстановление и проверка целостности.
 - [Disk storage](docs/DISK_STORAGE.md): выделенный диск под uploads, mount, `/etc/fstab`, Docker Compose bind mount и безопасное отключение.
@@ -105,7 +108,11 @@ cd server
 Production-примеры являются opt-in и не влияют на default development stack:
 
 - `docker-compose.production.yml.example`
+- `podman-compose.production.yml.example`
 - `.env.production.example`
+- `helm/values-production.example.yaml`
+- `helm/values-federation.example.yaml`
+- `deploy/federation/*.example.yml`
 - `deploy/nginx/messenger.conf.example`
 - `deploy/caddy/Caddyfile.example`
 - `deploy/systemd/*.example`

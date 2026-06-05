@@ -1,0 +1,146 @@
+# Production-like Podman Compose template для Messenger.
+# Перед изменением скопируйте файл:
+#   cp podman-compose.production.yml.example podman-compose.production.yml
+#   podman compose -f podman-compose.production.yml up -d --build
+#
+# Template является opt-in и не влияет на docker-compose.yml.
+
+x-logging: &default-logging
+  driver: k8s-file
+  options:
+    max-size: "50m"
+
+x-app-env: &app-env
+  DB_HOST: postgres
+  REDIS_HOST: redis
+  STORAGE_PROVIDER: ${STORAGE_PROVIDER:-s3}
+  STORAGE_DISK_PATH: ${STORAGE_DISK_PATH:-/data/uploads}
+  S3_ENDPOINT: ${S3_ENDPOINT:?set S3_ENDPOINT in .env}
+  S3_ACCESS_KEY: ${S3_ACCESS_KEY:?set S3_ACCESS_KEY in .env}
+  S3_SECRET_KEY: ${S3_SECRET_KEY:?set S3_SECRET_KEY in .env}
+  S3_BUCKET_NAME: ${S3_BUCKET_NAME:?set S3_BUCKET_NAME in .env}
+  S3_REGION: ${S3_REGION:-us-east-1}
+  S3_PATH_STYLE_ACCESS_ENABLED: ${S3_PATH_STYLE_ACCESS_ENABLED:-true}
+  S3_AUTO_CREATE_BUCKET: ${S3_AUTO_CREATE_BUCKET:-false}
+  JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET in .env}
+  MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE: health,info,metrics,prometheus
+
+services:
+  postgres:
+    image: postgres:15
+    container_name: messenger-postgres
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-messenger}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    networks:
+      - messenger-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER:-postgres} -d $${POSTGRES_DB:-messenger}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+    logging: *default-logging
+
+  redis:
+    image: redis:7-alpine
+    container_name: messenger-redis
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    networks:
+      - messenger-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+    logging: *default-logging
+
+  server:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    container_name: messenger-server
+    ports:
+      - "127.0.0.1:8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      <<: *app-env
+    volumes:
+      - files_data:/data/uploads:Z
+    networks:
+      - messenger-network
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/actuator/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 20
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges
+    logging: *default-logging
+
+  worker:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    container_name: messenger-worker
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      <<: *app-env
+    command: ["java", "-jar", "app.jar", "--server.port=8081", "--spring.application.name=messenger-worker"]
+    volumes:
+      - files_data:/data/uploads:Z
+    networks:
+      - messenger-network
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges
+    logging: *default-logging
+
+  web-client:
+    build:
+      context: ./web-client
+      dockerfile: Dockerfile
+    container_name: messenger-web-client
+    ports:
+      - "127.0.0.1:3001:3000"
+    depends_on:
+      server:
+        condition: service_healthy
+    networks:
+      - messenger-network
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=production
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3000 || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 20
+    security_opt:
+      - no-new-privileges
+    logging: *default-logging
+
+networks:
+  messenger-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  redis_data:
+  files_data:
