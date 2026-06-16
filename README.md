@@ -3,131 +3,271 @@
 [![CI](https://github.com/Variel42k/messenger/actions/workflows/ci.yml/badge.svg)](https://github.com/Variel42k/messenger/actions/workflows/ci.yml)
 [![License: AGPL-3.0](https://img.shields.io/badge/License-AGPL--3.0-blue.svg)](LICENSE)
 
-Messenger - open-source self-hosted мессенджер для команд, сообществ и организаций, которым важен контроль над своими данными и инфраструктурой.
+Messenger — open-source self-hosted мессенджер для команд, сообществ и организаций, которым важен контроль над своими данными и инфраструктурой.
 
 ## Возможности
 
-- Self-hosted deployment через Docker Compose и базовую Helm-структуру.
-- Real-time messaging через WebSocket/STOMP.
-- File uploads через S3-compatible storage или disk storage.
-- PostgreSQL и Redis.
-- JWT authentication с access и refresh tokens.
-- Role-based сценарии для пользователей и администрирования.
-- Web client на React и desktop client на JavaFX.
-- Swagger API docs и Spring Actuator health checks.
+- Self-hosted развёртывание: Docker Compose, Podman Compose, Kubernetes/Helm
+- Real-time сообщения через WebSocket/STOMP
+- Загрузка файлов: S3-compatible storage или disk storage с монтированием произвольных папок/дисков
+- PostgreSQL и Redis
+- JWT-аутентификация с access/refresh токенами
+- LDAP / Active Directory интеграция
+- OIDC / SSO через ADFS, Azure AD, Keycloak
+- Role-based доступ для пользователей и администраторов
+- Web-клиент на React, desktop-клиент на JavaFX
+- Swagger API docs и Spring Actuator health checks
 
-## Быстрый запуск
+---
+
+## Quick Start
+
+Выберите ваш сценарий:
+
+### Интерактивная установка (рекомендуется)
+
+Мастер установки задаст вопросы и настроит всё автоматически — runtime, хранилище, домен, email:
 
 ```bash
 git clone https://github.com/Variel42k/messenger.git
 cd messenger
+bash scripts/install-wizard.sh
+```
+
+Для мгновенного запуска dev-окружения без вопросов:
+
+```bash
+bash scripts/install-wizard.sh --quick
+```
+
+---
+
+### Локальная разработка (Docker, 1 команда)
+
+```bash
+git clone https://github.com/Variel42k/messenger.git && cd messenger
 docker compose up -d --build
 ```
 
-После запуска:
+| Сервис | URL |
+|--------|-----|
+| Web-клиент | http://localhost:3001 |
+| API | http://localhost:8080 |
+| Swagger UI | http://localhost:8080/swagger-ui/index.html |
+| MailHog (fake email) | http://localhost:8025 |
+| Health | http://localhost:8080/actuator/health |
 
-- API server: http://localhost:8080
-- Swagger UI: http://localhost:8080/swagger-ui/index.html
-- Web client: http://localhost:3001
-- LocalStack S3 endpoint: http://localhost:4566
-- Health check: http://localhost:8080/actuator/health
+Учётные данные: `admin` / `admin123` (только для dev!)
 
-## Скрипт установки и эксплуатации
+---
 
-`scripts/messengerctl.sh` - основная точка управления self-hosted установкой. Скрипт проверяет зависимости, подготавливает `.env`, генерирует `JWT_SECRET` при необходимости, собирает и запускает сервисы, создаёт backups, восстанавливает backups, управляет disk storage и выполняет диагностику.
-
-Примеры:
+### Production — Docker Compose
 
 ```bash
-./scripts/messengerctl.sh install
-./scripts/messengerctl.sh update
-./scripts/messengerctl.sh backup
+git clone https://github.com/Variel42k/messenger.git && cd messenger
+cp .env.production.example .env
+# Отредактируйте .env: пароли, JWT_SECRET, S3 или disk, ваш домен
+./scripts/messengerctl.sh install --runtime docker --profile production
+```
+
+После установки настройте reverse proxy:
+
+```bash
+sudo cp deploy/nginx/messenger.conf.example /etc/nginx/conf.d/messenger.conf
+# Замените chat.example.com на ваш домен
+sudo nginx -t && sudo systemctl reload nginx
+```
+
+Подробности: [docs/INSTALL.md](docs/INSTALL.md#quick-start-production-docker-compose)
+
+---
+
+### Production — Podman (rootless)
+
+```bash
+git clone https://github.com/Variel42k/messenger.git && cd messenger
+cp .env.production.example .env
+# Отредактируйте .env
+./scripts/messengerctl.sh install --runtime podman --profile production
+```
+
+Подробности: [docs/PODMAN.md](docs/PODMAN.md)
+
+---
+
+### Production — Kubernetes / Helm
+
+```bash
+git clone https://github.com/Variel42k/messenger.git && cd messenger
+cp helm/values-production.example.yaml helm/values-production.yaml
+# Отредактируйте values-production.yaml: ingress, БД, S3, secrets
+./scripts/messengerctl.sh install \
+  --runtime kubernetes \
+  --namespace messenger \
+  --release messenger \
+  --values helm/values-production.yaml
+```
+
+Подробности: [docs/KUBERNETES.md](docs/KUBERNETES.md)
+
+---
+
+## Хранилище файлов
+
+Messenger хранит загруженные файлы в S3-compatible storage или на диске.
+
+```dotenv
+# В .env:
+
+# Вариант 1: S3 / MinIO
+STORAGE_PROVIDER=s3
+S3_ENDPOINT=https://minio.internal.company.com
+S3_ACCESS_KEY=your-key
+S3_SECRET_KEY=your-secret
+
+# Вариант 2: Диск — Docker volume (данные в /var/lib/docker/volumes/)
+STORAGE_PROVIDER=disk
+
+# Вариант 3: Диск — конкретная папка на хосте (через docker-compose.override.yml)
+STORAGE_PROVIDER=disk
+# + создайте docker-compose.override.yml с bind mount вашей папки
+
+# Вариант 4: Отдельный блочный диск
+sudo ./scripts/messengerctl.sh disk-install --device /dev/sdb --mount-point /srv/messenger/uploads --fs ext4 --force
+```
+
+Подробности о монтировании папок и дисков: [docs/INSTALL.md#монтирование-папок-и-дисков](docs/INSTALL.md#монтирование-папок-и-дисков)
+
+---
+
+## Active Directory и LDAP
+
+Настройка LDAP/AD через Admin API после установки:
+
+```bash
+# 1. Включить LDAP (добавить в .env или docker-compose.override.yml)
+APP_LDAP_ENABLED=true
+
+# 2. Настроить через API
+curl -X POST http://localhost:8080/api/admin/ldap-settings \
+  -H "Authorization: Bearer $ADMIN_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "ldapUrl": "ldap://dc01.company.com:389",
+    "baseDn": "DC=company,DC=com",
+    "userDnPattern": "CN={0},OU=Users,DC=company,DC=com",
+    "managerDn": "CN=svc-ldap,OU=ServiceAccounts,DC=company,DC=com",
+    "managerPassword": "Password"
+  }'
+
+# 3. Тест подключения
+curl -X POST http://localhost:8080/api/admin/ldap-test-connection \
+  -H "Authorization: Bearer $ADMIN_TOKEN"
+```
+
+Для нескольких доменов — используйте AD Global Catalog (порт 3268) или Keycloak как LDAP-агрегатор.
+
+Для OIDC (ADFS / Azure AD / Keycloak):
+
+```bash
+curl -X PUT http://localhost:8080/api/admin/oidc/provider \
+  -H "Authorization: Bearer $ADMIN_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "enabled": true,
+    "providerName": "adfs",
+    "issuerUri": "https://adfs.company.com/adfs",
+    "authorizationUri": "https://adfs.company.com/adfs/oauth2/authorize",
+    "tokenUri": "https://adfs.company.com/adfs/oauth2/token",
+    "userInfoUri": "https://adfs.company.com/adfs/userinfo",
+    "jwksUri": "https://adfs.company.com/adfs/discovery/keys",
+    "clientId": "YOUR_CLIENT_ID",
+    "clientSecret": "YOUR_CLIENT_SECRET",
+    "redirectUri": "https://chat.company.com/api/auth/oidc/callback",
+    "scopes": "openid profile email",
+    "autoProvisionUsers": true
+  }'
+```
+
+Полное руководство с пошаговым тестированием: [docs/AD_LDAP_TESTING.md](docs/AD_LDAP_TESTING.md)
+
+---
+
+## Скрипт управления
+
+`scripts/messengerctl.sh` — основная точка управления:
+
+```bash
+./scripts/messengerctl.sh install    # установка
+./scripts/messengerctl.sh update     # обновление с backup
+./scripts/messengerctl.sh backup     # создать backup
 ./scripts/messengerctl.sh restore --file backups/messenger-backup-20260531-120000.tar.gz
-./scripts/messengerctl.sh uninstall
+./scripts/messengerctl.sh status     # статус сервисов
+./scripts/messengerctl.sh logs --service server --tail 200
 ./scripts/messengerctl.sh disk-install --device /dev/sdb --mount-point /srv/messenger/uploads --fs ext4 --force
-./scripts/messengerctl.sh disk-remove --mount-point /srv/messenger/uploads
+./scripts/messengerctl.sh help       # все команды
 ```
 
-Показать все команды:
-
-```bash
-./scripts/messengerctl.sh help
-```
-
-## Локальная разработка
-
-Запустить инфраструктуру в Docker, а приложения локально:
-
-```bash
-docker compose up -d postgres redis localstack
-
-cd server
-./mvnw spring-boot:run
-
-cd ../web-client
-npm install
-npm start
-```
-
-Для backend в Windows PowerShell:
-
-```powershell
-cd server
-.\mvnw.cmd spring-boot:run
-```
+---
 
 ## Документация
 
-- [Развертывание](docs/DEPLOYMENT.md): требования к серверу, `.env`, Docker Compose deployment, health checks, storage modes, logs и troubleshooting.
-- [Матрица развертывания](docs/DEPLOYMENT_MATRIX.md): сравнение Docker Compose, Podman Compose и Kubernetes Helm с Mermaid-графами.
-- [Podman](docs/PODMAN.md): production-like запуск через Podman Compose, rootless/SELinux notes и systemd.
-- [Kubernetes](docs/KUBERNETES.md): Helm deployment, production values, update и rollback.
-- [Эксплуатация](docs/OPERATIONS.md): install, update, stop, restart, uninstall, purge, rollback, диагностика и операции с дисками через скрипт.
-- [Backup и restore](docs/BACKUP_RESTORE.md): состав backup, ручной backup, backup через скрипт, восстановление и проверка целостности.
-- [Disk storage](docs/DISK_STORAGE.md): выделенный диск под uploads, mount, `/etc/fstab`, Docker Compose bind mount и безопасное отключение.
-- [Production](docs/PRODUCTION.md): production-аудит, HTTPS/TLS, reverse proxy, backup retention, systemd, log rotation, monitoring, S3/MinIO, migrations, rollback, Compose hardening и production templates.
-- [Архитектура](docs/ARCHITECTURE.md): обзор backend, clients и infrastructure.
-- [Groups and Channels API](docs/API_GROUPS_CHANNELS.md): контракты groups/channels.
-- [Storage and Build Notes](docs/STORAGE_AND_BUILD.md): заметки по build и storage.
-- [Testing](docs/TESTING.md): тестирование проекта.
+| Документ | Содержание |
+|----------|-----------|
+| [docs/INSTALL.md](docs/INSTALL.md) | **Полное руководство по установке** — все варианты, quick start, хранилище, сеть |
+| [docs/AD_LDAP_TESTING.md](docs/AD_LDAP_TESTING.md) | **LDAP/AD и OIDC** — настройка, тестирование, multi-domain |
+| [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) | Требования, .env, storage, health checks, troubleshooting |
+| [docs/DEPLOYMENT_MATRIX.md](docs/DEPLOYMENT_MATRIX.md) | Сравнение Docker / Podman / Kubernetes |
+| [docs/PODMAN.md](docs/PODMAN.md) | Podman Compose, rootless, SELinux, systemd |
+| [docs/KUBERNETES.md](docs/KUBERNETES.md) | Helm, production values, rollback |
+| [docs/OPERATIONS.md](docs/OPERATIONS.md) | Ежедневная эксплуатация через messengerctl.sh |
+| [docs/BACKUP_RESTORE.md](docs/BACKUP_RESTORE.md) | Backup, restore, проверка целостности |
+| [docs/DISK_STORAGE.md](docs/DISK_STORAGE.md) | Диски, mount, fstab, docker-compose override |
+| [docs/PRODUCTION.md](docs/PRODUCTION.md) | Hardening, TLS, reverse proxy, monitoring |
+| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | Архитектура системы |
 
-## Development credentials по умолчанию
+---
 
-Эти значения предназначены только для локальной разработки:
+## Учётные данные по умолчанию
+
+Только для локальной разработки:
 
 | Сервис | Логин | Пароль |
-| --- | --- | --- |
+|--------|-------|--------|
 | Application admin | `admin` | `admin123` |
 | PostgreSQL | `postgres` | `password` |
 | LocalStack S3 | `test` | `test` |
 
-Перед production-like deployment замените dev secrets и credentials. Начните с [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) и [docs/PRODUCTION.md](docs/PRODUCTION.md).
+Перед production-развёртыванием обязательно смените credentials. Начните с [docs/INSTALL.md](docs/INSTALL.md) и [docs/PRODUCTION.md](docs/PRODUCTION.md).
 
-## Production templates
+---
 
-Production-примеры являются opt-in и не влияют на default development stack:
+## Production шаблоны
+
+Production-конфигурации являются opt-in и не влияют на dev-стек:
 
 - `docker-compose.production.yml.example`
 - `podman-compose.production.yml.example`
 - `.env.production.example`
 - `helm/values-production.example.yaml`
-- `helm/values-federation.example.yaml`
-- `deploy/federation/*.example.yml`
 - `deploy/nginx/messenger.conf.example`
 - `deploy/caddy/Caddyfile.example`
 - `deploy/systemd/*.example`
 - `deploy/prometheus/prometheus.yml.example`
 
+---
+
 ## Технологический стек
 
-- Backend: Java 17, Spring Boot 3.x, Spring MVC, Spring Security, WebSocket/STOMP, Spring Actuator.
-- Database: PostgreSQL 15, Flyway migrations, JPA/Hibernate.
-- Cache/coordination: Redis 7.
-- File storage: S3-compatible storage через LocalStack/dev или external S3/production; optional disk storage.
-- Web client: React и Webpack.
-- Desktop client: JavaFX.
-- Infrastructure: Docker Compose и базовый Helm chart.
+- **Backend**: Java 17, Spring Boot 3.x, Spring Security, WebSocket/STOMP
+- **Database**: PostgreSQL 15, Flyway migrations, JPA/Hibernate
+- **Cache**: Redis 7
+- **Storage**: S3-compatible (LocalStack/MinIO/AWS) или disk
+- **Auth**: JWT, LDAP, OIDC
+- **Web-клиент**: React, Webpack
+- **Desktop-клиент**: JavaFX
+- **Infrastructure**: Docker Compose, Podman Compose, Kubernetes/Helm
 
-## Лицензия / commercial use
+## Лицензия
 
-Messenger Community Edition распространяется под GNU Affero General Public License v3.0. Полный текст лицензии находится в [LICENSE](LICENSE), дополнительные notices - в [NOTICE](NOTICE).
+Messenger Community Edition распространяется под GNU Affero General Public License v3.0. Полный текст: [LICENSE](LICENSE), дополнительные notices: [NOTICE](NOTICE).
